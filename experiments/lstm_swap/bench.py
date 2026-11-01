@@ -49,12 +49,11 @@ if ARCH == "seq-conv":
     with torch.inference_mode():
         for n in sorted(set(WARM) | set(FRESH) | {150}):
             forced[n] = seqfwd.text_half(model, *inputs(full_ps[:n]))[2]
-    studs = st.make_students(model)
     if STUDENTS:
-        sd = torch.load(STUDENTS, weights_only=True)
-        for path, m in studs.items():
-            m.load_state_dict({k[len(path) + 1:]: v for k, v in sd.items() if k.startswith(path + ".")})
+        studs = st.load_students(model, STUDENTS)
         forced = {}
+    else:
+        studs = st.make_students(model, {})
     only = tuple(os.environ.get("ONLY", "").split(","))
     st.install(model, {p: m for p, m in studs.items() if p.startswith(only)})
     model.half().to(dev)

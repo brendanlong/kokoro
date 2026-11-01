@@ -4,7 +4,8 @@ Stage "local": each student sees the teacher's input to its LSTM and regresses t
 Stage "chain": all students installed at once; match the teacher's continuous durations, F0, N
 and text-encoder output, so the students learn to correct each other's errors.
 
-usage: train.py DATA_DIR OUT_PT LOCAL_STEPS CHAIN_STEPS"""
+usage: train.py DATA_DIR OUT_PT LOCAL_STEPS CHAIN_STEPS [ARCH_JSON]
+ARCH_JSON maps LSTM paths to overrides of students.DEFAULT_ARCH."""
 import copy
 import json
 import math
@@ -25,6 +26,7 @@ import students as st
 logger.remove()
 DATA, OUT = sys.argv[1], sys.argv[2]
 LOCAL_STEPS, CHAIN_STEPS = int(sys.argv[3]), int(sys.argv[4])
+ARCH = json.loads(sys.argv[5]) if len(sys.argv) > 5 else {}
 ACCUM, LR = 16, 1e-3
 dev = "cuda"
 torch.manual_seed(0)
@@ -38,7 +40,7 @@ voices = [torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True
 train = open(os.path.join(DATA, "train.txt")).read().split("\n")[:-1]
 val = open(os.path.join(DATA, "val.txt")).read().split("\n")[:-1][:100]
 val_voices = [random.randrange(len(voices)) for _ in val]
-studs = st.make_students(teacher)
+studs = st.make_students(teacher, ARCH)
 for m in studs.values():
     m.to(dev)
 params = [p for m in studs.values() for p in m.parameters()]
@@ -130,8 +132,7 @@ for stage, steps in [("local", LOCAL_STEPS), ("chain", CHAIN_STEPS)]:
             rec = {"stage": stage, "step": step, "s": round(time.time() - t0), "train": {k: round(v, 5) for k, v in running.items()}}
             if step % 1000 == 0 or step == steps:
                 rec["val"] = validate()
-                sd = {f"{path}.{k}": v for path, m in studs.items() for k, v in m.state_dict().items()}
-                torch.save(sd, OUT + ".tmp")
+                st.save_students(studs, ARCH, OUT + ".tmp")
                 os.replace(OUT + ".tmp", OUT)
             print(json.dumps(rec), flush=True)
             log.write(json.dumps(rec) + "\n")

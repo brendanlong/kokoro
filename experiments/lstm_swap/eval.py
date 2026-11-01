@@ -31,10 +31,7 @@ random.seed(1)
 
 teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
 student = copy.deepcopy(teacher)
-studs = st.make_students(teacher)
-sd = torch.load(STUDENTS, weights_only=True)
-for path, m in studs.items():
-    m.load_state_dict({k[len(path) + 1:]: v for k, v in sd.items() if k.startswith(path + ".")})
+studs = st.load_students(teacher, STUDENTS)
 st.install(student, {p: m for p, m in studs.items() if p.startswith(ONLY)})
 student.to(dev).eval()
 voice_files = sorted(f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/") and f[7] in "ab")

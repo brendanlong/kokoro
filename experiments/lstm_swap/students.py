@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -32,12 +33,29 @@ class ConvSeq(nn.Module):
         return x
 
 
-def make_students(model, n_blocks=2, kernel=7, mult=1.5):
+DEFAULT_ARCH = dict(n_blocks=2, kernel=7, mult=1.5)
+
+
+def make_students(model, arch):
+    """arch maps an LSTM path to overrides of DEFAULT_ARCH."""
     return {
-        path: ConvSeq(lstm.input_size, 2 * lstm.hidden_size, n_blocks, kernel, mult)
+        path: ConvSeq(lstm.input_size, 2 * lstm.hidden_size, **{**DEFAULT_ARCH, **arch.get(path, {})})
         for path in LSTM_PATHS
         for lstm in [model.get_submodule(path)]
     }
+
+
+def save_students(studs, arch, file):
+    state = {f"{path}.{k}": v for path, m in studs.items() for k, v in m.state_dict().items()}
+    torch.save({"arch": arch, "state": state}, file)
+
+
+def load_students(model, file):
+    ckpt = torch.load(file, weights_only=True)
+    studs = make_students(model, ckpt["arch"])
+    for path, m in studs.items():
+        m.load_state_dict({k[len(path) + 1:]: v for k, v in ckpt["state"].items() if k.startswith(path + ".")})
+    return studs
 
 
 def install(model, students):
