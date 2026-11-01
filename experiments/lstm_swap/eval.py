@@ -1,6 +1,7 @@
 """Quality of the distilled students vs the teacher on held-out text (The Time Machine), fp32.
 
-usage: eval.py DATA_DIR STUDENTS_PT OUT_DIR"""
+usage: eval.py DATA_DIR STUDENTS_PT OUT_DIR [PATH_PREFIX,...]
+With prefixes, only the students whose LSTM path starts with one of them are installed."""
 import copy
 import json
 import os
@@ -22,6 +23,7 @@ import students as st
 
 logger.remove()
 DATA, STUDENTS, OUT = sys.argv[1:4]
+ONLY = tuple(sys.argv[4].split(",")) if len(sys.argv) > 4 else ("",)
 N_UTT, N_WAV = 100, 6
 dev = "cuda"
 os.makedirs(OUT, exist_ok=True)
@@ -33,7 +35,7 @@ studs = st.make_students(teacher)
 sd = torch.load(STUDENTS, weights_only=True)
 for path, m in studs.items():
     m.load_state_dict({k[len(path) + 1:]: v for k, v in sd.items() if k.startswith(path + ".")})
-st.install(student, studs)
+st.install(student, {p: m for p, m in studs.items() if p.startswith(ONLY)})
 student.to(dev).eval()
 voice_files = sorted(f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/") and f[7] in "ab")
 voices = [torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True) for f in voice_files]

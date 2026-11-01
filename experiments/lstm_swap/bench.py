@@ -3,7 +3,7 @@
 usage: bench.py OUT_JSON MODE [STUDENTS_PT]
 MODE: {original,seq-lstm,seq-conv}-{eager,compiled}
 seq-conv without STUDENTS_PT uses untrained convs with the teacher's durations forced, which
-times the architecture but not its quality."""
+times the architecture but not its quality. ONLY=prefix,... installs only the matching students."""
 import json
 import os
 import sys
@@ -55,9 +55,10 @@ if ARCH == "seq-conv":
         for path, m in studs.items():
             m.load_state_dict({k[len(path) + 1:]: v for k, v in sd.items() if k.startswith(path + ".")})
         forced = {}
-    st.install(model, studs)
+    only = tuple(os.environ.get("ONLY", "").split(","))
+    st.install(model, {p: m for p, m in studs.items() if p.startswith(only)})
     model.half().to(dev)
-r = {"mode": MODE, "students": STUDENTS, "torch": torch.__version__,
+r = {"mode": MODE, "students": STUDENTS, "only": os.environ.get("ONLY"), "torch": torch.__version__,
      "params_M": round(sum(p.numel() for p in model.parameters()) / 1e6, 2)}
 
 g = model.decoder.generator

@@ -1,0 +1,15 @@
+{
+ "mode": "seq-lstm-compiled",
+ "students": null,
+ "torch": "2.8.0+cu128",
+ "params_M": 81.78,
+ "first_call_s": 34.8,
+ "median_ms": 48.6,
+ "audio_s_per_s": 199.4,
+ "repeat_150ph_ms": 47.0,
+ "text_half_median_ms": 9.6,
+ "acoustic_half_median_ms": 37.9,
+ "nan_lengths": 0,
+ "corr_vs_original_eager": "length 1279800 vs 1281000",
+ "peak_reserved_mb": 1256
+}

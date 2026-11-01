@@ -171,3 +171,4 @@ cython_debug/
 .pypirc
 experiments/lstm_swap/out/
 experiments/lstm_swap/data/
+experiments/lstm_swap/v*/
