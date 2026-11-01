@@ -66,13 +66,15 @@ class AdaINResBlock1(nn.Module):
         self.alpha2 = nn.ParameterList([nn.Parameter(torch.ones(1, channels, 1)) for i in range(len(self.convs2))])
 
     def forward(self, x, s):
-        for c1, c2, n1, n2, a1, a2 in zip(self.convs1, self.convs2, self.adain1, self.adain2, self.alpha1, self.alpha2):
-            xt = n1(x, s)
+        # Indexed rather than zip(): torch.compile can't iterate a ParameterList, and breaks the graph here
+        for i in range(len(self.convs1)):
+            a1, a2 = self.alpha1[i], self.alpha2[i]
+            xt = self.adain1[i](x, s)
             xt = xt + (1 / a1) * (torch.sin(a1 * xt) ** 2)  # Snake1D
-            xt = c1(xt)
-            xt = n2(xt, s)
+            xt = self.convs1[i](xt)
+            xt = self.adain2[i](xt, s)
             xt = xt + (1 / a2) * (torch.sin(a2 * xt) ** 2)  # Snake1D
-            xt = c2(xt)
+            xt = self.convs2[i](xt)
             x = xt + x
         return x
 
