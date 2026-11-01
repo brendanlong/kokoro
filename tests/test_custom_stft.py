@@ -79,3 +79,23 @@ def test_different_window_sizes():
 
         # Check that output length is reasonable
         assert output.shape[-1] >= signal.shape[-1]
+
+
+@pytest.mark.parametrize("n_fft, hop", [(20, 5), (800, 200), (21, 5)])
+def test_inverse_matches_torch_istft(n_fft, hop):
+    """The inverse alone, on an arbitrary spectrum, at Kokoro's own settings (n_fft 20, hop 5) and others."""
+    torch.manual_seed(0)
+    custom_stft = CustomSTFT(filter_length=n_fft, hop_length=hop, win_length=n_fft)
+    torch_stft = TorchSTFT(filter_length=n_fft, hop_length=hop, win_length=n_fft)
+    magnitude = torch.rand(1, n_fft // 2 + 1, 400)
+    phase = (torch.rand(1, n_fft // 2 + 1, 400) - 0.5) * 2 * np.pi
+    # A real signal's DC and Nyquist bins have no phase; torch.istft ignores it
+    phase[:, 0] = 0
+    if n_fft % 2 == 0:
+        phase[:, -1] = 0
+
+    custom = custom_stft.inverse(magnitude, phase).squeeze()
+    expected = torch_stft.inverse(magnitude, phase).squeeze()
+
+    assert custom.shape == expected.shape
+    assert torch.allclose(custom, expected, atol=1e-5)
