@@ -116,7 +116,8 @@ def test_chinese_tones_become_stress_for_other_voices():
     pytest.importorskip('misaki.zh')
     english = phonemize(make_pipeline('a'), 'He saw 北京 today.')
     spanish = phonemize(make_pipeline('e'), 'Vio 北京 hoy.')
-    for ps in (english, spanish):
+    nasal = phonemize(make_pipeline('a'), 'He said 嗯 and 呣.')
+    for ps in (english, spanish, nasal):
         assert not any(arrow in ps for arrow in '↓↗↘→')
     assert 'bˈeiʤ' not in english and 'bˈei' in english and 'ʰ' not in english
     assert 'pˈei' in spanish
