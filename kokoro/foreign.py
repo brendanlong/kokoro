@@ -42,10 +42,10 @@ KANA = regex.compile(r'[\p{Hiragana}\p{Katakana}]')
 HEBREW_POINTS = regex.compile(r'\p{Mn}')
 # Sounds Kokoro has no phoneme for (Arabic ḥ and ʿayn), mapped to the nearest one it has.
 NEAREST_PHONEMES = str.maketrans({'ħ': 'h', 'ʕ': 'ʔ'})
-# misaki marks Mandarin tones with an arrow after each syllable's vowels. Only the Chinese
-# voices are trained on these; other voices pause or hiss on them, so they become the stress
-# mark those voices know, which goes before the vowels.
-MANDARIN_TONE = regex.compile(r'([aeiouyɛəɤɨʊɚɔ]+)[↓↗↘→]')
+# misaki marks Mandarin tones with an arrow after each syllable's vowels, or its nasal in
+# 嗯 (n↗) and 呣 (m↗). Only the Chinese voices are trained on these; other voices pause or
+# hiss on them, so they become the stress mark those voices know, which goes before the vowels.
+MANDARIN_TONE = regex.compile(r'([aeiouyɛəɤɨʊɚɔmnŋ]+)[↓↗↘→]')
 # English voices aspirate p/t/k, so Mandarin's unaspirated ones (pinyin b/d/g) sound like p/t/k
 # ("Bai" as "pie"); English b/d/g are closer.
 MANDARIN_UNASPIRATED = regex.compile(r'[ptk](?!ʰ)')
