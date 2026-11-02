@@ -52,12 +52,12 @@ def test_latin_in_hindi_uses_english():
 
 
 def test_han_uses_chinese():
-    zh = pytest.importorskip('misaki.zh')
-    g2p = zh.ZHG2P()
+    pytest.importorskip('misaki.zh')
     for lang_code in 'ae':
-        ps = phonemize(make_pipeline(lang_code), '他说：“我们走吧，明天见。”')
+        pipeline = make_pipeline(lang_code)
+        ps = phonemize(pipeline, '他说：“我们走吧，明天见。”')
         for clause in ['他说', '我们走吧', '明天见']:
-            assert g2p(clause)[0] in ps
+            assert pipeline.foreign.phonemize(clause, 'zh') in ps
 
 
 def test_chinese_pipeline_reads_english():
@@ -71,10 +71,10 @@ def test_chinese_pipeline_reads_english():
 
 
 def test_han_without_mandarin_reading_does_not_crash():
-    zh = pytest.importorskip('misaki.zh')
-    g2p = zh.ZHG2P()
-    ps = phonemize(make_pipeline('a'), '我兙你')
-    assert g2p('我')[0] in ps and g2p('你')[0] in ps
+    pytest.importorskip('misaki.zh')
+    pipeline = make_pipeline('a')
+    ps = phonemize(pipeline, '我兙你')
+    assert pipeline.foreign.phonemize('我', 'zh') in ps and pipeline.foreign.phonemize('你', 'zh') in ps
 
 
 def test_without_misaki_zh_han_reads_as_before(monkeypatch):
@@ -110,3 +110,19 @@ def test_arabic_sounds_missing_from_vocab_use_nearest_phoneme():
     ps = phonemize(make_pipeline('a'), 'He said مرحبا to علي.')
     assert 'ħ' not in ps and 'ʕ' not in ps
     assert espeak_ps('ar', 'مرحبا').replace('ħ', 'h') in ps
+
+
+def test_chinese_tones_become_stress_for_other_voices():
+    pytest.importorskip('misaki.zh')
+    english = phonemize(make_pipeline('a'), 'He saw 北京 today.')
+    spanish = phonemize(make_pipeline('e'), 'Vio 北京 hoy.')
+    nasal = phonemize(make_pipeline('a'), 'He said 嗯 and 呣.')
+    for ps in (english, spanish, nasal):
+        assert not any(arrow in ps for arrow in '↓↗↘→')
+    assert 'bˈeiʤ' not in english and 'bˈei' in english and 'ʰ' not in english
+    assert 'pˈei' in spanish
+
+
+def test_chinese_pipeline_keeps_tones():
+    zh = pytest.importorskip('misaki.zh')
+    assert zh.ZHG2P()('北京')[0] in phonemize(make_pipeline('z'), '北京')
