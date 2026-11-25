@@ -1,3 +1,4 @@
+# Copy the students checkpoint to ckpt/students.pt first (untracked; gpuc ships it with the checkout).
 name: lstm-swap-listen
 setup: bash experiments/lstm_swap/setup.sh
 command: .venv/bin/python experiments/lstm_swap/listen.py ckpt/students.pt experiments/lstm_swap/out/listen
