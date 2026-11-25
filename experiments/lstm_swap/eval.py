@@ -48,6 +48,17 @@ def corr(a, b):
     return float(np.corrcoef(logspec(a), logspec(b))[0, 1])
 
 
+def loudness_db_diff(a, b, dur):
+    """Mean absolute difference in loudness (dB) per input token's stretch of audio, over the
+    stretches within 40 dB of the loudest; a and b were rendered with the same durations."""
+    per_frame = len(a) / int(dur.sum())
+    edges = (torch.cat([torch.zeros(1), dur.float().cumsum(0)]) * per_frame).round().long().tolist()
+    db = lambda x: np.array([10 * np.log10(np.mean(x[i:j] ** 2) + 1e-10) for i, j in zip(edges, edges[1:]) if j > i])
+    da, dbb = db(a), db(b)
+    keep = da > da.max() - 40
+    return float(np.abs(da - dbb)[keep].mean())
+
+
 def words(text):
     return re.sub(r"[^a-z0-9' ]", " ", text.lower()).split()
 
@@ -88,6 +99,8 @@ for i, ps in enumerate(val):
         n_mae=float((t0["N"] - s_forced["N"]).abs().mean()),
         corr_student_forced=corr(t0["audio"].numpy(), s_forced["audio"].numpy()),
         corr_teacher_seed1=corr(t0["audio"].numpy(), t1["audio"].numpy()),
+        loud_db_student_forced=loudness_db_diff(t0["audio"].numpy(), s_forced["audio"].numpy(), t0["pred_dur"]),
+        loud_db_teacher_seed1=loudness_db_diff(t0["audio"].numpy(), t1["audio"].numpy(), t0["pred_dur"]),
     ))
     for name, a in [("teacher", t0), ("teacher_seed1", t1), ("student", s_free)]:
         transcripts[name].append(asr(a["audio"].numpy())["text"])

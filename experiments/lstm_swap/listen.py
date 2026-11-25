@@ -1,8 +1,9 @@
 """Listening samples: the original model against the distilled students, fp32, batch 1.
 
-usage: listen.py STUDENTS_PT OUT_DIR
-Each text in listen_texts.json is rendered by every variant with the same noise seed, plus the
-original with another seed (how much two renders of the original differ on their own)."""
+usage: listen.py OUT_DIR NAME=STUDENTS_PT[:PREFIX,...] ...
+Each text in listen_texts.json is rendered by the original, the original with another noise seed
+(how much two renders of the original differ on their own), and each NAME: the students in
+STUDENTS_PT whose LSTM path starts with a PREFIX (all of them without), all with the same seed."""
 import copy
 import json
 import os
@@ -18,27 +19,26 @@ import seqfwd
 import students as st
 
 logger.remove()
-STUDENTS, OUT = sys.argv[1:3]
+OUT = sys.argv[1]
 HERE = os.path.dirname(os.path.abspath(__file__))
 dev = "cuda"
 os.makedirs(OUT, exist_ok=True)
 
 teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
-studs = st.load_students(teacher, STUDENTS)
 
 
-def with_students(prefixes):
+def with_students(spec):
+    pt, _, prefixes = spec.partition(":")
     m = copy.deepcopy(teacher)
-    st.install(m, {p: copy.deepcopy(s) for p, s in studs.items() if p.startswith(prefixes)})
+    studs = st.load_students(teacher, pt)
+    st.install(m, {p: s for p, s in studs.items() if p.startswith(tuple(prefixes.split(",")))})
     return m.to(dev).eval()
 
 
-VARIANTS = {
-    "original": (teacher, 0),
-    "original_seed1": (teacher, 1),
-    "swap5": (with_students(("predictor.",)), 0),
-    "swap6": (with_students(("",)), 0),
-}
+VARIANTS = {"original": (teacher, 0), "original_seed1": (teacher, 1)}
+for arg in sys.argv[2:]:
+    name, _, spec = arg.partition("=")
+    VARIANTS[name] = (with_students(spec), 0)
 pipes = {lang: KPipeline(lang_code=lang, repo_id="hexgrad/Kokoro-82M", model=False) for lang in "ab"}
 voices = {}
 items = []
