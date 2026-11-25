@@ -1,0 +1,14 @@
+[
+ {"voice": "af_heart", "source": "The Time Machine (held out)", "text": "The air was free from gnats, the earth from weeds or fungi; everywhere were fruits and sweet and delightful flowers; brilliant butterflies flew hither and thither."},
+ {"voice": "am_michael", "source": "The Time Machine (held out)", "text": "At first I did not realise their blindness, and struck furiously at them with my bar, in a frenzy of fear, as they approached me, killing one and crippling several more."},
+ {"voice": "bf_emma", "source": "The Time Machine (held out)", "text": "As I stood staring, the door into the garden opened, and the man-servant appeared."},
+ {"voice": "bm_george", "source": "The Time Machine (held out)", "text": "But my mind was already in revolution; my guesses and impressions were slipping and sliding to a new adjustment."},
+ {"voice": "af_bella", "source": "The Time Machine (held out)", "text": "“It would be remarkably convenient for the historian,” the Psychologist suggested."},
+ {"voice": "af_heart", "source": "Question", "text": "Wait, you're telling me the meeting was moved to Thursday, and nobody thought to tell me?"},
+ {"voice": "am_fenrir", "source": "Exclamation", "text": "Stop! Don't touch that wire, it's still live!"},
+ {"voice": "af_heart", "source": "List and numbers", "text": "The recipe calls for three eggs, two cups of flour, a pinch of salt, and about 250 milliliters of milk."},
+ {"voice": "bf_emma", "source": "Short", "text": "No."},
+ {"voice": "am_michael", "source": "Technical prose", "text": "The scheduler packs several short requests into one decoder row, so the GPU stays busy even when every listener asks for a single sentence."},
+ {"voice": "af_bella", "source": "Long sentence", "text": "When the rain finally stopped, late in the afternoon, the children ran out into the yard, splashing through every puddle they could find, while their grandmother watched from the porch and pretended not to notice how muddy they were getting."},
+ {"voice": "bm_george", "source": "Dialogue", "text": "“I suppose you think that's funny,” she said quietly. “It isn't.”"}
+]
