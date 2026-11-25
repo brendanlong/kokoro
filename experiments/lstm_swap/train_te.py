@@ -30,7 +30,7 @@ TE = "text_encoder.lstm"
 ACCUM = 16 if MODE == "tenc" else 8
 LR = 1e-3 if MODE == "tenc" else 1e-4
 # The decoder's backward pass on long sentences doesn't fit next to the desktop on an 8 GB card.
-MAX_PHONEMES = 150 if MODE == "audio" else 10**9
+MAX_PHONEMES = 100 if MODE == "audio" else 10**9
 dev = "cuda"
 torch.manual_seed(0)
 random.seed(0)

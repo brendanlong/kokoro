@@ -1,7 +1,8 @@
-# Copy the students checkpoint to ckpt/students.pt first (untracked; gpuc ships it with the checkout).
+# Needs the checkpoints in ckpt/ in the checkout (untracked; gpuc ships them with it): v1.pt from
+# train.py, te-context.pt and te-audio.pt from train_te.py.
 name: lstm-swap-listen
 setup: bash experiments/lstm_swap/setup.sh
-command: .venv/bin/python experiments/lstm_swap/listen.py ckpt/students.pt experiments/lstm_swap/out/listen
+command: .venv/bin/python experiments/lstm_swap/listen.py experiments/lstm_swap/out/listen swap5=ckpt/v1.pt:predictor. swap6=ckpt/v1.pt swap6_context=ckpt/te-context.pt swap6_audio=ckpt/te-audio.pt
 gpus: 1
 priority: 10
 env:
