@@ -1,0 +1,12 @@
+{
+ "mode": "original-eager",
+ "students": null,
+ "torch": "2.8.0+cu128",
+ "params_M": 81.78,
+ "first_call_s": 2.2,
+ "median_ms": 88.8,
+ "audio_s_per_s": 108.7,
+ "repeat_150ph_ms": 86.5,
+ "nan_lengths": 0,
+ "peak_reserved_mb": 2188
+}

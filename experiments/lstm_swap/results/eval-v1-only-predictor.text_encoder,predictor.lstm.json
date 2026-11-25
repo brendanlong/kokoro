@@ -1,0 +1,13 @@
+{
+ "phonemes": 98.96,
+ "dur_mae_frames": 0.1182,
+ "dur_exact_frac": 0.894,
+ "len_ratio": 1.0037,
+ "f0_rmse_hz": 11.6546,
+ "n_mae": 0.2195,
+ "corr_student_forced": 0.9553,
+ "corr_teacher_seed1": 0.994,
+ "wer_teacher_seed1_vs_teacher": 0.0011,
+ "wer_student_vs_teacher": 0.0061,
+ "n_utterances": 100
+}

@@ -1,0 +1,15 @@
+{
+ "mode": "seq-conv-compiled",
+ "students": null,
+ "torch": "2.8.0+cu128",
+ "params_M": 82.42,
+ "first_call_s": 43.4,
+ "median_ms": 35.2,
+ "audio_s_per_s": 268.4,
+ "repeat_150ph_ms": 35.4,
+ "text_half_median_ms": 3.3,
+ "acoustic_half_median_ms": 32.0,
+ "nan_lengths": 0,
+ "corr_vs_original_eager": "length 1281600 vs 1281000",
+ "peak_reserved_mb": 1090
+}

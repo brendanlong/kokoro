@@ -1,0 +1,15 @@
+{
+ "mode": "seq-lstm-eager",
+ "students": null,
+ "torch": "2.8.0+cu128",
+ "params_M": 81.78,
+ "first_call_s": 0.5,
+ "median_ms": 102.5,
+ "audio_s_per_s": 103.6,
+ "repeat_150ph_ms": 84.8,
+ "text_half_median_ms": 15.2,
+ "acoustic_half_median_ms": 72.4,
+ "nan_lengths": 0,
+ "corr_vs_original_eager": 1.0,
+ "peak_reserved_mb": 2188
+}

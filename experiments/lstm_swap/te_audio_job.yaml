@@ -1,0 +1,13 @@
+# Needs ckpt/v1.pt (the v1 students) and ckpt/data/{train,val}.txt (prep_data.py's output) in the checkout, untracked.
+name: lstm-swap-te-audio
+setup: bash experiments/lstm_swap/setup.sh
+command: bash experiments/lstm_swap/run_te.sh experiments/lstm_swap/out/te-audio audio 3000
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/lstm_swap/out
+estimated_runtime_min: 125

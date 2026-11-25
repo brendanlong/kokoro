@@ -1,0 +1,11 @@
+name: lstm-swap-ablate
+setup: bash experiments/lstm_swap/setup.sh
+command: bash experiments/lstm_swap/run_ablate.sh $GPUC_DATA_DIR/kokoro-lstm-swap/v1/students.pt experiments/lstm_swap/out/ablate
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+outputs:
+  - path: experiments/lstm_swap/out
+estimated_runtime_min: 12

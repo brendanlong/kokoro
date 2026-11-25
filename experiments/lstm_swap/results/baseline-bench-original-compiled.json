@@ -1,0 +1,13 @@
+{
+ "mode": "original-compiled",
+ "students": null,
+ "torch": "2.8.0+cu128",
+ "params_M": 81.78,
+ "first_call_s": 48.7,
+ "median_ms": 50.3,
+ "audio_s_per_s": 189.6,
+ "repeat_150ph_ms": 49.2,
+ "nan_lengths": 0,
+ "corr_vs_original_eager": 0.9393,
+ "peak_reserved_mb": 1272
+}

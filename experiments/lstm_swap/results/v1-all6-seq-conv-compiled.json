@@ -1,0 +1,15 @@
+{
+ "mode": "seq-conv-compiled",
+ "students": "/home/claude/.gpuc/data/kokoro-lstm-swap/v1/students.pt",
+ "only": null,
+ "torch": "2.8.0+cu128",
+ "params_M": 82.42,
+ "first_call_s": 24.8,
+ "median_ms": 36.0,
+ "audio_s_per_s": 271.9,
+ "repeat_150ph_ms": 35.7,
+ "text_half_median_ms": 3.4,
+ "acoustic_half_median_ms": 32.7,
+ "nan_lengths": 0,
+ "peak_reserved_mb": 1376
+}
