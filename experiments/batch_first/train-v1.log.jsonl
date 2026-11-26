@@ -1,0 +1,81 @@
+{"stage": "start", "val": {"blocks": 0.81033, "F0": 0.2848, "N": 1.14184, "stft": 6.85866}}
+{"stage": "local", "step": 100, "s": 149, "peak_mib": 2227, "train": {"blocks": 0.19807}}
+{"stage": "local", "step": 200, "s": 291, "peak_mib": 2234, "train": {"blocks": 0.10634}}
+{"stage": "local", "step": 300, "s": 435, "peak_mib": 2234, "train": {"blocks": 0.08004}}
+{"stage": "local", "step": 400, "s": 578, "peak_mib": 2234, "train": {"blocks": 0.06849}}
+{"stage": "local", "step": 500, "s": 722, "peak_mib": 2234, "train": {"blocks": 0.05924}, "val": {"blocks": 0.05474, "F0": 0.03643, "N": 0.16533, "stft": 2.73187}}
+{"stage": "local", "step": 600, "s": 869, "peak_mib": 2234, "train": {"blocks": 0.05176}}
+{"stage": "local", "step": 700, "s": 1012, "peak_mib": 2234, "train": {"blocks": 0.0478}}
+{"stage": "local", "step": 800, "s": 1156, "peak_mib": 2234, "train": {"blocks": 0.04222}}
+{"stage": "local", "step": 900, "s": 1300, "peak_mib": 2259, "train": {"blocks": 0.03745}}
+{"stage": "local", "step": 1000, "s": 1445, "peak_mib": 2259, "train": {"blocks": 0.03725}, "val": {"blocks": 0.03655, "F0": 0.02811, "N": 0.12392, "stft": 2.54866}}
+{"stage": "local", "step": 1100, "s": 1593, "peak_mib": 2259, "train": {"blocks": 0.03532}}
+{"stage": "local", "step": 1200, "s": 1738, "peak_mib": 2259, "train": {"blocks": 0.03436}}
+{"stage": "local", "step": 1300, "s": 1881, "peak_mib": 2259, "train": {"blocks": 0.03411}}
+{"stage": "local", "step": 1400, "s": 2025, "peak_mib": 2259, "train": {"blocks": 0.0353}}
+{"stage": "local", "step": 1500, "s": 2170, "peak_mib": 2259, "train": {"blocks": 0.03305}, "val": {"blocks": 0.03197, "F0": 0.02741, "N": 0.11601, "stft": 2.4955}}
+{"stage": "local", "step": 1600, "s": 2316, "peak_mib": 2259, "train": {"blocks": 0.03274}}
+{"stage": "local", "step": 1700, "s": 2458, "peak_mib": 2259, "train": {"blocks": 0.03216}}
+{"stage": "local", "step": 1800, "s": 2603, "peak_mib": 2270, "train": {"blocks": 0.03458}}
+{"stage": "local", "step": 1900, "s": 2747, "peak_mib": 2270, "train": {"blocks": 0.03161}}
+{"stage": "local", "step": 2000, "s": 2888, "peak_mib": 2270, "train": {"blocks": 0.03373}, "val": {"blocks": 0.03125, "F0": 0.02681, "N": 0.11342, "stft": 2.48141}}
+{"stage": "chain", "step": 100, "s": 145, "peak_mib": 5093, "train": {"F0": 0.05614, "N": 0.16541, "stft": 1.17448}}
+{"stage": "chain", "step": 200, "s": 290, "peak_mib": 5328, "train": {"F0": 0.02656, "N": 0.15535, "stft": 1.06301}}
+{"stage": "chain", "step": 300, "s": 434, "peak_mib": 5328, "train": {"F0": 0.03148, "N": 0.17915, "stft": 1.0063}}
+{"stage": "chain", "step": 400, "s": 580, "peak_mib": 5328, "train": {"F0": 0.05181, "N": 0.14673, "stft": 0.99084}}
+{"stage": "chain", "step": 500, "s": 726, "peak_mib": 5532, "train": {"F0": 0.03816, "N": 0.16604, "stft": 0.95707}, "val": {"blocks": 0.06528, "F0": 0.02235, "N": 0.09309, "stft": 0.96286}}
+{"stage": "chain", "step": 600, "s": 877, "peak_mib": 5532, "train": {"F0": 0.05109, "N": 0.19503, "stft": 0.93205}}
+{"stage": "chain", "step": 700, "s": 1022, "peak_mib": 5532, "train": {"F0": 0.04476, "N": 0.13658, "stft": 0.91481}}
+{"stage": "chain", "step": 800, "s": 1165, "peak_mib": 5532, "train": {"F0": 0.03505, "N": 0.10961, "stft": 0.91087}}
+{"stage": "chain", "step": 900, "s": 1311, "peak_mib": 5532, "train": {"F0": 0.0337, "N": 0.12129, "stft": 0.87881}}
+{"stage": "chain", "step": 1000, "s": 1456, "peak_mib": 5532, "train": {"F0": 0.04496, "N": 0.16643, "stft": 0.82696}, "val": {"blocks": 0.07956, "F0": 0.02197, "N": 0.08764, "stft": 0.90122}}
+{"stage": "chain", "step": 1100, "s": 1605, "peak_mib": 5751, "train": {"F0": 0.02072, "N": 0.11937, "stft": 0.87245}}
+{"stage": "chain", "step": 1200, "s": 1750, "peak_mib": 5751, "train": {"F0": 0.01938, "N": 0.10539, "stft": 0.85795}}
+{"stage": "chain", "step": 1300, "s": 1895, "peak_mib": 5751, "train": {"F0": 0.03273, "N": 0.13293, "stft": 0.88292}}
+{"stage": "chain", "step": 1400, "s": 2040, "peak_mib": 5751, "train": {"F0": 0.04584, "N": 0.12786, "stft": 0.87485}}
+{"stage": "chain", "step": 1500, "s": 2184, "peak_mib": 5751, "train": {"F0": 0.03751, "N": 0.10646, "stft": 0.92075}, "val": {"blocks": 0.09035, "F0": 0.02167, "N": 0.08662, "stft": 0.85932}}
+{"stage": "chain", "step": 1600, "s": 2332, "peak_mib": 5751, "train": {"F0": 0.0332, "N": 0.07408, "stft": 0.82989}}
+{"stage": "chain", "step": 1700, "s": 2477, "peak_mib": 5751, "train": {"F0": 0.02807, "N": 0.10901, "stft": 0.80084}}
+{"stage": "chain", "step": 1800, "s": 2623, "peak_mib": 5751, "train": {"F0": 0.02275, "N": 0.11985, "stft": 0.85433}}
+{"stage": "chain", "step": 1900, "s": 2768, "peak_mib": 5751, "train": {"F0": 0.03221, "N": 0.10366, "stft": 0.82461}}
+{"stage": "chain", "step": 2000, "s": 2913, "peak_mib": 5751, "train": {"F0": 0.02115, "N": 0.16254, "stft": 0.78328}, "val": {"blocks": 0.09551, "F0": 0.02157, "N": 0.08808, "stft": 0.82007}}
+{"stage": "chain", "step": 2100, "s": 3063, "peak_mib": 5751, "train": {"F0": 0.02194, "N": 0.10301, "stft": 0.81679}}
+{"stage": "chain", "step": 2200, "s": 3211, "peak_mib": 5751, "train": {"F0": 0.03265, "N": 0.10512, "stft": 0.84212}}
+{"stage": "chain", "step": 2300, "s": 3356, "peak_mib": 5751, "train": {"F0": 0.02606, "N": 0.14221, "stft": 0.78278}}
+{"stage": "chain", "step": 2400, "s": 3500, "peak_mib": 5751, "train": {"F0": 0.02578, "N": 0.1041, "stft": 0.81081}}
+{"stage": "chain", "step": 2500, "s": 3643, "peak_mib": 5751, "train": {"F0": 0.02619, "N": 0.09657, "stft": 0.83562}, "val": {"blocks": 0.10008, "F0": 0.02012, "N": 0.08122, "stft": 0.79426}}
+{"stage": "chain", "step": 2600, "s": 3792, "peak_mib": 5751, "train": {"F0": 0.02639, "N": 0.08241, "stft": 0.75592}}
+{"stage": "chain", "step": 2700, "s": 3936, "peak_mib": 5751, "train": {"F0": 0.0377, "N": 0.10744, "stft": 0.74969}}
+{"stage": "chain", "step": 2800, "s": 4080, "peak_mib": 5751, "train": {"F0": 0.02994, "N": 0.0779, "stft": 0.76209}}
+{"stage": "chain", "step": 2900, "s": 4224, "peak_mib": 5751, "train": {"F0": 0.02751, "N": 0.15924, "stft": 0.77635}}
+{"stage": "chain", "step": 3000, "s": 4370, "peak_mib": 5751, "train": {"F0": 0.02868, "N": 0.10613, "stft": 0.75184}, "val": {"blocks": 0.10207, "F0": 0.02066, "N": 0.07865, "stft": 0.78236}}
+{"stage": "chain", "step": 3100, "s": 4520, "peak_mib": 5751, "train": {"F0": 0.03679, "N": 0.13659, "stft": 0.73346}}
+{"stage": "chain", "step": 3200, "s": 4665, "peak_mib": 5751, "train": {"F0": 0.02366, "N": 0.10561, "stft": 0.76867}}
+{"stage": "chain", "step": 3300, "s": 4811, "peak_mib": 5751, "train": {"F0": 0.02185, "N": 0.07478, "stft": 0.72216}}
+{"stage": "chain", "step": 3400, "s": 4954, "peak_mib": 5751, "train": {"F0": 0.02032, "N": 0.07659, "stft": 0.75201}}
+{"stage": "chain", "step": 3500, "s": 5099, "peak_mib": 5751, "train": {"F0": 0.02926, "N": 0.11654, "stft": 0.76056}, "val": {"blocks": 0.10428, "F0": 0.01956, "N": 0.0759, "stft": 0.75521}}
+{"stage": "chain", "step": 3600, "s": 5249, "peak_mib": 5751, "train": {"F0": 0.02284, "N": 0.12451, "stft": 0.77784}}
+{"stage": "chain", "step": 3700, "s": 5392, "peak_mib": 5751, "train": {"F0": 0.03142, "N": 0.11665, "stft": 0.78679}}
+{"stage": "chain", "step": 3800, "s": 5536, "peak_mib": 5751, "train": {"F0": 0.01187, "N": 0.08592, "stft": 0.78001}}
+{"stage": "chain", "step": 3900, "s": 5682, "peak_mib": 5751, "train": {"F0": 0.01707, "N": 0.09269, "stft": 0.72899}}
+{"stage": "chain", "step": 4000, "s": 5826, "peak_mib": 5751, "train": {"F0": 0.02404, "N": 0.12222, "stft": 0.71448}, "val": {"blocks": 0.10479, "F0": 0.01922, "N": 0.07691, "stft": 0.74629}}
+{"stage": "chain", "step": 4100, "s": 5976, "peak_mib": 5751, "train": {"F0": 0.0341, "N": 0.09813, "stft": 0.7583}}
+{"stage": "chain", "step": 4200, "s": 6119, "peak_mib": 5751, "train": {"F0": 0.02825, "N": 0.1106, "stft": 0.77303}}
+{"stage": "chain", "step": 4300, "s": 6265, "peak_mib": 5751, "train": {"F0": 0.02655, "N": 0.11544, "stft": 0.69322}}
+{"stage": "chain", "step": 4400, "s": 6409, "peak_mib": 5751, "train": {"F0": 0.01579, "N": 0.13194, "stft": 0.72842}}
+{"stage": "chain", "step": 4500, "s": 6553, "peak_mib": 5751, "train": {"F0": 0.02093, "N": 0.10014, "stft": 0.70712}, "val": {"blocks": 0.10528, "F0": 0.01895, "N": 0.07788, "stft": 0.74239}}
+{"stage": "chain", "step": 4600, "s": 6703, "peak_mib": 5751, "train": {"F0": 0.02123, "N": 0.08604, "stft": 0.66967}}
+{"stage": "chain", "step": 4700, "s": 6847, "peak_mib": 5751, "train": {"F0": 0.02598, "N": 0.08836, "stft": 0.74193}}
+{"stage": "chain", "step": 4800, "s": 6992, "peak_mib": 5751, "train": {"F0": 0.01523, "N": 0.08625, "stft": 0.72434}}
+{"stage": "chain", "step": 4900, "s": 7137, "peak_mib": 5751, "train": {"F0": 0.03086, "N": 0.11787, "stft": 0.76168}}
+{"stage": "chain", "step": 5000, "s": 7281, "peak_mib": 5751, "train": {"F0": 0.02275, "N": 0.10879, "stft": 0.71704}, "val": {"blocks": 0.10519, "F0": 0.01883, "N": 0.07501, "stft": 0.73161}}
+{"stage": "chain", "step": 5100, "s": 7430, "peak_mib": 5751, "train": {"F0": 0.02417, "N": 0.12168, "stft": 0.7019}}
+{"stage": "chain", "step": 5200, "s": 7573, "peak_mib": 5751, "train": {"F0": 0.02075, "N": 0.11631, "stft": 0.65051}}
+{"stage": "chain", "step": 5300, "s": 7717, "peak_mib": 5751, "train": {"F0": 0.01596, "N": 0.09188, "stft": 0.77017}}
+{"stage": "chain", "step": 5400, "s": 7861, "peak_mib": 5751, "train": {"F0": 0.02615, "N": 0.11018, "stft": 0.74758}}
+{"stage": "chain", "step": 5500, "s": 8005, "peak_mib": 5751, "train": {"F0": 0.02185, "N": 0.10742, "stft": 0.75527}, "val": {"blocks": 0.10546, "F0": 0.01867, "N": 0.07545, "stft": 0.72917}}
+{"stage": "chain", "step": 5600, "s": 8155, "peak_mib": 5751, "train": {"F0": 0.01184, "N": 0.06508, "stft": 0.67465}}
+{"stage": "chain", "step": 5700, "s": 8300, "peak_mib": 5751, "train": {"F0": 0.01744, "N": 0.06195, "stft": 0.70608}}
+{"stage": "chain", "step": 5800, "s": 8445, "peak_mib": 5751, "train": {"F0": 0.02548, "N": 0.11593, "stft": 0.69769}}
+{"stage": "chain", "step": 5900, "s": 8591, "peak_mib": 5751, "train": {"F0": 0.02829, "N": 0.0932, "stft": 0.70185}}
+{"stage": "chain", "step": 6000, "s": 8736, "peak_mib": 5751, "train": {"F0": 0.02102, "N": 0.09018, "stft": 0.70984}, "val": {"blocks": 0.10536, "F0": 0.01873, "N": 0.07503, "stft": 0.72664}}
