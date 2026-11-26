@@ -1,0 +1,13 @@
+# Needs ckpt/te-audio.pt, ckpt/bf-v1.pt and ckpt/data/{train,val}.txt in the checkout, untracked.
+name: vocos-smoke
+setup: bash experiments/lstm_swap/setup.sh
+command: bash experiments/vocos/run_smoke.sh
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 15

@@ -1,6 +1,6 @@
 """Listening samples: the original model against the distilled students, fp32, batch 1.
 
-usage: listen.py OUT_DIR NAME=STUDENTS_PT[:PREFIX,...][+FRAME_SIDE_PT] ...
+usage: listen.py OUT_DIR NAME=STUDENTS_PT[:PREFIX,...][+FRAME_SIDE_PT][@DECODER_PT] ...
 Each text in listen_texts.json is rendered by the original, the original with another noise seed
 (how much two renders of the original differ on their own), and each NAME: the students in
 STUDENTS_PT whose LSTM path starts with a PREFIX (all of them without), all with the same seed."""
@@ -28,6 +28,7 @@ teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
 
 
 def with_students(spec):
+    spec, _, decoder = spec.partition("@")
     spec, _, frame_side = spec.partition("+")
     pt, _, prefixes = spec.partition(":")
     m = copy.deepcopy(teacher)
@@ -39,6 +40,12 @@ def with_students(spec):
 
         m = adaln.make_student(m)
         adaln.load_frame_side(m, torch.load(frame_side, weights_only=True)["state"])
+    if decoder:  # a Vocos-style decoder (experiments/vocos)
+        sys.path.insert(0, os.path.join(HERE, "..", "vocos"))
+        import model as vm
+
+        m.decoder = vm.from_kokoro(teacher.decoder)
+        m.decoder.load_state_dict(torch.load(decoder, weights_only=True)["state"])
     return m.to(dev).eval()
 
 
