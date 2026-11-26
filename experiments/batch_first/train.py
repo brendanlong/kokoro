@@ -41,8 +41,9 @@ LOCAL_STEPS, CHAIN_STEPS = int(sys.argv[4]), int(sys.argv[5])
 INIT = sys.argv[6] if len(sys.argv) > 6 else None
 ACCUM = 8
 LR = {"local": 2e-4, "chain": 1e-4}
-# The decoder's backward pass on longer sentences doesn't fit beside the desktop on the 8 GB card.
-MAX_PHONEMES = 100
+# The decoder's backward pass on longer sentences doesn't fit beside the desktop on the 8 GB card
+# (100 ran out of memory). 64 phonemes is about 4 s of audio.
+MAX_PHONEMES = 64
 dev = "cuda"
 torch.manual_seed(0)
 random.seed(0)
@@ -110,16 +111,21 @@ def stft_loss(a, b):
     return total / 3
 
 
-def local_losses(ids, ref):
+def local_losses(ids, ref, scale=None):
+    """With scale, each block's loss is backpropagated (times scale) as soon as it's computed, so
+    only one block's activations are held at a time."""
     global capturing
     capturing = True
     teacher_pass(ids, ref, 0)
     capturing = False
-    out = {}
+    total = 0.0
     for name, (x, s, y) in captured.items():
-        out[name] = F.mse_loss(student.get_submodule(name)(x, s), y) / y.var().clamp(min=1e-4)
+        loss = F.mse_loss(student.get_submodule(name)(x, s), y) / y.var().clamp(min=1e-4) / len(captured)
+        if scale is not None:
+            (loss * scale).backward()
+        total += loss.item()
     captured.clear()
-    return {"blocks": sum(out.values()) / len(out)}
+    return {"blocks": total}
 
 
 def chain_losses(ids, ref):
@@ -142,7 +148,7 @@ def validate():
     for ps, v in zip(val, val_voices):
         ids, ref = inputs(ps, v)
         for k, x in {**local_losses(ids, ref), **chain_losses(ids, ref)}.items():
-            tot[k] = tot.get(k, 0) + x.item() / len(val)
+            tot[k] = tot.get(k, 0) + float(x) / len(val)
     student.train()
     return {k: round(v, 5) for k, v in tot.items()}
 
@@ -163,15 +169,18 @@ for stage, steps in [("local", LOCAL_STEPS), ("chain", CHAIN_STEPS)]:
     warmup = max(1, steps // 20)
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda i: min(1, (i + 1) / warmup) * 0.5 * (1 + math.cos(math.pi * min(i, steps) / steps)))
-    fn = local_losses if stage == "local" else chain_losses
     t0 = time.time()
     for step in range(1, steps + 1):
         running = {}
         for _ in range(ACCUM):
-            losses = fn(*inputs(random.choice(train), random.randrange(len(voices))))
-            (sum(losses.values()) / ACCUM).backward()
+            args = inputs(random.choice(train), random.randrange(len(voices)))
+            if stage == "local":
+                losses = local_losses(*args, scale=1 / ACCUM)
+            else:
+                losses = chain_losses(*args)
+                (sum(losses.values()) / ACCUM).backward()
             for k, v in losses.items():
-                running[k] = running.get(k, 0) + v.item() / ACCUM
+                running[k] = running.get(k, 0) + float(v) / ACCUM
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         opt.step()
         opt.zero_grad(set_to_none=True)
