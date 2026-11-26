@@ -1,0 +1,13 @@
+# Needs ckpt/te-audio.pt (lstm_swap/train_te.py's students) and ckpt/data/{train,val}.txt in the checkout, untracked.
+name: batch-first-smoke
+setup: bash experiments/lstm_swap/setup.sh
+command: bash experiments/batch_first/run_smoke.sh
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/batch_first/out
+estimated_runtime_min: 20

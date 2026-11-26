@@ -1,0 +1,14 @@
+# Needs ckpt/te-audio.pt (lstm_swap/train_te.py's students) and ckpt/data/{train,val}.txt in the checkout, untracked.
+name: batch-first-v1
+setup: bash experiments/lstm_swap/setup.sh
+command: bash experiments/batch_first/run.sh experiments/batch_first/out/v1 2000 6000
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/batch_first/out
+estimated_runtime_min: 300
+progress_command: "tail -1 experiments/batch_first/out/v1/frame_side.log.jsonl 2>/dev/null | python3 -c 'import json,sys; r=json.loads(sys.stdin.read()); print(round((r.get(\"step\",0)+(2000 if r[\"stage\"]==\"chain\" else 0))/8000,3))'"

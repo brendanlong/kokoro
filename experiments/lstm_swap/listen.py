@@ -1,6 +1,6 @@
 """Listening samples: the original model against the distilled students, fp32, batch 1.
 
-usage: listen.py OUT_DIR NAME=STUDENTS_PT[:PREFIX,...] ...
+usage: listen.py OUT_DIR NAME=STUDENTS_PT[:PREFIX,...][+FRAME_SIDE_PT] ...
 Each text in listen_texts.json is rendered by the original, the original with another noise seed
 (how much two renders of the original differ on their own), and each NAME: the students in
 STUDENTS_PT whose LSTM path starts with a PREFIX (all of them without), all with the same seed."""
@@ -28,10 +28,17 @@ teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
 
 
 def with_students(spec):
+    spec, _, frame_side = spec.partition("+")
     pt, _, prefixes = spec.partition(":")
     m = copy.deepcopy(teacher)
     studs = st.load_students(teacher, pt)
     st.install(m, {p: s for p, s in studs.items() if p.startswith(tuple(prefixes.split(",")))})
+    if frame_side:  # a batch-first frame side (experiments/batch_first)
+        sys.path.insert(0, os.path.join(HERE, "..", "batch_first"))
+        import adaln
+
+        m = adaln.make_student(m)
+        adaln.load_frame_side(m, torch.load(frame_side, weights_only=True)["state"])
     return m.to(dev).eval()
 
 
