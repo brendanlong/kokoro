@@ -1,0 +1,13 @@
+# Needs ckpt/vocos-v1.pt (train.py) in the checkout, and the corpus run.sh makes.
+name: vocos-gap
+setup: bash experiments/lstm_swap/setup.sh
+command: .venv/bin/python experiments/vocos/gap.py $GPUC_DATA_DIR/kokoro-vocos/train $GPUC_DATA_DIR/kokoro-vocos/val ckpt/vocos-v1.pt
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 5
