@@ -1,0 +1,13 @@
+# Needs ckpt/vocos-v1.pt in the checkout, and the corpus run.sh makes (for sentence lengths).
+name: vocos-speed
+setup: bash experiments/lstm_swap/setup.sh
+command: bash -c "mkdir -p experiments/vocos/out/speed && .venv/bin/python experiments/vocos/bench_speed.py $GPUC_DATA_DIR/kokoro-vocos/train ckpt/vocos-v1.pt experiments/vocos/out/speed/speed.json"
+gpus: 1
+priority: 5
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 20
