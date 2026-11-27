@@ -13,9 +13,10 @@ LABELS = {
     "original_seed1": "Original, another noise seed",
     "lstmfree": "LSTM-free",
     "teacher": "Batch-first (per-frame normalization, Kokoro's decoder layout)",
-    "vocos": "Vocos-style decoder, spectral losses only",
+    "vocos": "Vocos-style decoder, stage one (spectral losses only)",
+    "vocos_adv": "Vocos-style decoder, stage two (adversarial)",
 }
-BLIND = ("original", "vocos")
+BLIND = ("original", "vocos_adv")
 
 parts = ["""
 <style>
@@ -36,9 +37,10 @@ body.blind .clip-row:not(.ab) { display: none; }
 normalization in Kokoro's decoder layout, from November 26), and a new Vocos-style decoder. The Vocos-style
 decoder replaces Kokoro's 53M-parameter decoder, which upsamples 300-fold through many convolution layers, with
 17M parameters of ConvNeXt blocks at 80 frames per second and one inverse STFT; it runs behind the LSTM-free
-text side and the batch-first pitch/loudness predictor. This is stage one of its training: spectral losses
-only, no adversarial training yet, which in Paradee's experience sounds robotic or buzzy until the adversarial
-stage. All clips use the same noise seed except "another noise seed".</p>
+text side and the batch-first pitch/loudness predictor. Stage one trained it with spectral losses only, which in Paradee's experience
+sounds robotic or buzzy; stage two (November 27) added adversarial training (multi-period and multi-resolution
+discriminators, 16,000 steps), which trades exact matching for realism, so its distances to the original grow
+even if it sounds better. All clips use the same noise seed except "another noise seed".</p>
 
 <h2 id="numbers">Measurements</h2>
 <p>100 held-out sentences of <cite>The Time Machine</cite>, fp32, against the original. Word error rate is
@@ -54,9 +56,11 @@ decoder.</p>
 <tr><td>Teacher (batch-first predictor, Kokoro's decoder)</td><td>0.83%</td><td>0.64 dB</td><td>0.944</td></tr>
 <tr><td>Batch-first (Nov 26)</td><td>0.66%</td><td>1.34 dB</td><td>0.915</td></tr>
 <tr><td>Vocos-style, stage one</td><td>0.88%</td><td>1.31 dB</td><td>0.923</td></tr>
+<tr><td>Vocos-style, stage two (adversarial)</td><td>1.32%</td><td>1.69 dB</td><td>0.907</td></tr>
 </tbody>
 </table>
-<p>The Vocos-style decoder against its teacher (same inputs): 1.11 dB, 0.942. Training took 37 minutes on the
+<p>Against its teacher (same inputs): stage one 1.11 dB, 0.942; stage two 1.53 dB, 0.924. Speed of the decoder alone (plain PyTorch, fp16, RTX 3060 Ti, uncompiled): 3.2 ms per
+sentence, 1,738x realtime, against 36 ms and 149x for Kokoro's decoder. Stage one took 37 minutes on the
 local GPU (60,000 steps of 16 crops of 1.6 s from 22 hours of teacher audio in all 54 voices, English text).</p>
 
 <h2 id="samples">Samples</h2>

@@ -8,7 +8,7 @@ second pass is timed, so cuDNN's per-shape plans are already built: steady state
 lengths a server sees (the worker replaces cuDNN for that). First calls are timed separately,
 which compiled includes torch.compile.
 
-usage: bench_speed.py CORPUS_DIR DECODER_PT OUT_JSON
+usage: bench_speed.py CORPUS_DIR OUT_JSON   (an untrained decoder: weights don't change its speed)
 """
 import json
 import random
@@ -23,7 +23,7 @@ from torch.nn.utils import parametrize
 import common
 
 logger.remove()
-CORPUS, DECODER, OUT = sys.argv[1:4]
+CORPUS, OUT = sys.argv[1:3]
 dev = "cuda"
 rng = random.Random(0)
 lengths = [e["frames"] for e in rng.sample(json.load(open(f"{CORPUS}/index.json")), 48)]
@@ -35,7 +35,7 @@ for m in kokoro.modules():
     if parametrize.is_parametrized(m, "weight"):
         parametrize.remove_parametrizations(m, "weight")
 kokoro_dec = kokoro.decoder.half().to(dev).eval()
-vocos = common.make_decoder(dev, DECODER).half().eval()
+vocos = common.make_decoder(dev).half().eval()
 for d in (kokoro_dec, vocos):
     # Compiled fp16, the sine generator gives NaNs for some lengths (lstm_swap/bench.py); keep it eager.
     src = d.generator.m_source if d is kokoro_dec else d.source
