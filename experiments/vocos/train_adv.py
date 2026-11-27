@@ -3,12 +3,14 @@
 Paradee (arXiv:2610.06817) found a decoder trained with spectral losses alone kept crisp harmonics
 where the teacher's turn breathy, which sounded robotic, and that the critics only took effect
 once the spectral losses stopped dominating: HiFi-GAN's weight of 45 barely moved it, 10 and then 3
-did. So the generator's loss is adversarial + 2 x feature matching + SPECTRAL x (mel + STFT + level),
-with SPECTRAL 10 for the first half of the steps and 3 for the second. "level" is the L1 distance
-between the log energies of each decoder frame (300 samples): on v1, with only mel and STFT, stage
-two came out about 1 dB quieter than the teacher over whole sentences.
+did. So the generator's loss is adversarial + 2 x feature matching + SPECTRAL x (stage one's
+weighted losses + level), with SPECTRAL 10 for the first half of the steps and 3 for the second.
+"level" is the L1 distance between the log energies of each decoder frame (300 samples): on v1,
+with only mel and STFT, stage two came out about 1 dB quieter than the teacher over whole sentences.
 
-usage: train_adv.py CORPUS_DIR VAL_CORPUS_DIR INIT_PT OUT_PT STEPS
+usage: train_adv.py CORPUS_DIR VAL_CORPUS_DIR INIT_PT OUT_PT STEPS [CONFIG_JSON]
+CONFIG_JSON: {"loss": {term: weight}}, common.Spectral's terms, as stage one had them (default mel
+and STFT).
 """
 import json
 import random
@@ -19,11 +21,13 @@ import torch
 from loguru import logger
 
 import common
+import metrics
 from discriminators import Discriminators, discriminator_loss, generator_losses
 
 logger.remove()
 CORPUS, VAL, INIT, OUT = sys.argv[1:5]
 STEPS = int(sys.argv[5])
+CONFIG = json.loads(sys.argv[6]) if len(sys.argv) > 6 else {}
 BATCH = 8
 LR = 2e-4
 FEATURE_MATCHING = 2.0
@@ -39,7 +43,7 @@ torch.manual_seed(0)
 rng = random.Random(1)
 
 train, val = common.Corpus(CORPUS, dev), common.Corpus(VAL, dev)
-spectral = common.Spectral(dev)
+spectral = common.Spectral(dev, CONFIG.get("loss"))
 decoder = common.make_decoder(dev, INIT)
 disc = Discriminators().to(dev)
 g_params = [p for p in decoder.parameters() if p.requires_grad]
@@ -55,10 +59,10 @@ log.write(json.dumps(rec) + "\n")
 t0, running = time.time(), {}
 for step in range(1, STEPS + 1):
     weight = 10.0 if step <= STEPS // 2 else 3.0
-    asr, f0, n, audio, source, style = train.crops(rng, BATCH)
+    asr, f0, n, audio, source, style, cycles0 = train.crops(rng, BATCH)
     real = audio[:, common.SCORED]
     with torch.autocast("cuda", dtype=torch.bfloat16):
-        fake = decoder(asr, f0, n, style, source=source)[:, 0, common.SCORED].float()
+        fake = decoder(asr, f0, n, style, source=source, cycles0=cycles0)[:, 0, common.SCORED].float()
 
         d_loss = discriminator_loss(disc(real), disc(fake.detach()))
     d_loss.backward()
@@ -69,7 +73,7 @@ for step in range(1, STEPS + 1):
     with torch.autocast("cuda", dtype=torch.bfloat16):
         adv, fm = generator_losses(disc(real), disc(fake))
     spec = {**spectral(fake, real), "level": level_loss(fake, real)}
-    g_loss = adv + FEATURE_MATCHING * fm + weight * (spec["mel"] + spec["stft"] + spec["level"])
+    g_loss = adv + FEATURE_MATCHING * fm + weight * (spectral.total({k: v for k, v in spec.items() if k != "level"}) + spec["level"])
     g_loss.backward()
     torch.nn.utils.clip_grad_norm_(g_params, 10.0)
     opt_g.step()
@@ -90,3 +94,7 @@ for step in range(1, STEPS + 1):
         log.write(json.dumps(rec) + "\n")
         log.flush()
 common.save(decoder, OUT)
+summary = metrics.evaluate(decoder, val, spectral, dev)
+print("METRICS", json.dumps(summary), flush=True)
+with open(OUT.replace(".pt", ".metrics.json"), "w") as f:
+    json.dump({"config": {**CONFIG, "init": INIT, "model": decoder.config}, "steps": STEPS, "metrics": summary}, f, indent=1)

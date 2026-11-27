@@ -1,0 +1,13 @@
+# Needs ckpt/{te-audio,bf-v1,vocos-phase}.pt and ckpt/data in the checkout, and the corpus run.sh makes.
+name: vocos-adv-phase-smoke
+setup: bash experiments/lstm_swap/setup.sh
+command: 'mkdir -p experiments/vocos/out/smoke-adv && .venv/bin/python experiments/vocos/train_adv.py $GPUC_DATA_DIR/kokoro-vocos/train $GPUC_DATA_DIR/kokoro-vocos/val ckpt/vocos-phase.pt experiments/vocos/out/smoke-adv/decoder.pt 20 ''{"loss": {"msmel": 1, "stft": 1, "phase": 1, "cplx": 1}}'''
+gpus: 1
+priority: 9
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 10

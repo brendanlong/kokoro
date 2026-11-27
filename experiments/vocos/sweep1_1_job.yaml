@@ -1,0 +1,17 @@
+# Stage-one sweep, wave 1: decoder head x loss recipe. Needs ckpt/te-audio.pt, ckpt/bf-v1.pt and
+# ckpt/data/{train,val}.txt in the checkout, untracked.
+name: vocos-sweep1-spec-phase+filter-phase
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/vocos/sweep.sh experiments/vocos/out/sweep1 60000 'spec-phase={"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}' 'filter-phase={"model":{"head":"filter","full_band":true},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}'
+gpus: 1
+priority: 11
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
+outputs:
+  - path: experiments/vocos/out/sweep1
+    s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/sweep1
+estimated_runtime_min: 75
+max_runtime_min: 240

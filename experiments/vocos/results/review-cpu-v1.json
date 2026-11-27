@@ -1,0 +1,116 @@
+{
+ "threads": 4,
+ "sentences": 12,
+ "audio_s": 81.7,
+ "stage_ms_per_audio_s": {
+  "bert+durations": 11.13,
+  "f0+n": 3.98,
+  "text encoder": 1.12,
+  "harmonic source": 7.42,
+  "kokoro decoder": 234.42,
+  "vocos decoder": 9.86
+ },
+ "crops": [
+  {
+   "margin": 8,
+   "snr_db": 35.395,
+   "logmag_l1": 0.014
+  },
+  {
+   "margin": 16,
+   "snr_db": 66.908,
+   "logmag_l1": 0.003
+  },
+  {
+   "margin": 24,
+   "snr_db": 112.753,
+   "logmag_l1": 0.0
+  },
+  {
+   "margin": 32,
+   "snr_db": Infinity,
+   "logmag_l1": 0.0
+  },
+  {
+   "margin": 48,
+   "snr_db": Infinity,
+   "logmag_l1": 0.0
+  }
+ ],
+ "bands": [
+  {
+   "band": "0-1000",
+   "frames": "voiced",
+   "abs_err": 0.548,
+   "bias": -0.011,
+   "dip_teacher": 0.949,
+   "dip_vocos": 0.969
+  },
+  {
+   "band": "0-1000",
+   "frames": "unvoiced",
+   "abs_err": 0.848,
+   "bias": 0.326
+  },
+  {
+   "band": "1000-2000",
+   "frames": "voiced",
+   "abs_err": 0.609,
+   "bias": 0.065,
+   "dip_teacher": 0.448,
+   "dip_vocos": 0.431
+  },
+  {
+   "band": "1000-2000",
+   "frames": "unvoiced",
+   "abs_err": 0.832,
+   "bias": 0.348
+  },
+  {
+   "band": "2000-4000",
+   "frames": "voiced",
+   "abs_err": 0.634,
+   "bias": 0.011,
+   "dip_teacher": 0.17,
+   "dip_vocos": 0.104
+  },
+  {
+   "band": "2000-4000",
+   "frames": "unvoiced",
+   "abs_err": 0.822,
+   "bias": 0.306
+  },
+  {
+   "band": "4000-8000",
+   "frames": "voiced",
+   "abs_err": 0.647,
+   "bias": 0.025,
+   "dip_teacher": 0.024,
+   "dip_vocos": 0.004
+  },
+  {
+   "band": "4000-8000",
+   "frames": "unvoiced",
+   "abs_err": 0.757,
+   "bias": 0.288
+  },
+  {
+   "band": "8000-12000",
+   "frames": "voiced",
+   "abs_err": 0.616,
+   "bias": 0.058,
+   "dip_teacher": 0.0,
+   "dip_vocos": 0.001
+  },
+  {
+   "band": "8000-12000",
+   "frames": "unvoiced",
+   "abs_err": 0.749,
+   "bias": 0.303
+  }
+ ],
+ "params_m": {
+  "vocos": 17.21,
+  "kokoro decoder": 53.31
+ }
+}

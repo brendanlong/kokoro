@@ -21,7 +21,7 @@ import students as st
 logger.remove()
 OUT = sys.argv[1]
 HERE = os.path.dirname(os.path.abspath(__file__))
-dev = "cuda"
+dev = "cuda" if torch.cuda.is_available() else "cpu"
 os.makedirs(OUT, exist_ok=True)
 
 teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
@@ -44,8 +44,7 @@ def with_students(spec):
         sys.path.insert(0, os.path.join(HERE, "..", "vocos"))
         import model as vm
 
-        m.decoder = vm.from_kokoro(teacher.decoder)
-        m.decoder.load_state_dict(torch.load(decoder, weights_only=True)["state"])
+        m.decoder = vm.load(teacher.decoder, decoder)
     return m.to(dev).eval()
 
 

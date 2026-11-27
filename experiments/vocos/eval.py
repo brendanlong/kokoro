@@ -49,8 +49,7 @@ teacher = adaln.make_student(lstmfree)
 adaln.load_frame_side(teacher, torch.load(FRAME_SIDE, weights_only=True)["state"])
 vocos = copy.deepcopy(teacher)
 teacher.decoder = lstmfree.decoder  # Kokoro's decoder behind the batch-first F0/N predictor
-vocos.decoder = vm.from_kokoro(lstmfree.decoder)
-vocos.decoder.load_state_dict(torch.load(DECODER, weights_only=True)["state"])
+vocos.decoder = vm.load(lstmfree.decoder, DECODER)
 teacher, vocos = teacher.to(dev).eval(), vocos.to(dev).eval()
 voice_files = sorted(f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/") and f[7] in "ab")
 voices = [torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True) for f in voice_files]

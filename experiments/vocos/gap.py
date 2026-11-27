@@ -22,7 +22,7 @@ decoder = common.make_decoder(dev, sys.argv[3]).eval()
 def crops(corpus, n=60):
     rng, tot = random.Random(5), {}
     for _ in range(n // 4):
-        asr, f0, nn, audio, source, style = corpus.crops(rng, 4)
+        asr, f0, nn, audio, source, style, _ = corpus.crops(rng, 4)
         out = decoder(asr, f0, nn, style, source=source)[:, 0]
         for k, v in spectral(out[:, common.SCORED], audio[:, common.SCORED]).items():
             tot[k] = tot.get(k, 0) + v.item() / (n // 4)
