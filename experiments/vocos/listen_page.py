@@ -78,12 +78,14 @@ steps, with a per-frame level loss added) from that. Its overall speech level is
 the candidate 1.19 dB, 0.934. Speed of the decoder alone (plain PyTorch, fp16, RTX 3060 Ti, uncompiled): 3.2 ms per
 sentence, 1,738x realtime, against 36 ms and 149x for Kokoro's decoder. Stage one took 37 minutes on the
 local GPU (60,000 steps of 16 crops of 1.6 s from 22 hours of teacher audio in all 54 voices, English text).</p>
-
-<h2 id="samples">Samples</h2>
-<p><label><input type="checkbox" id="blind"> Blind test</label>: shows only the original and the batch-first model, as A and B in random order, so you can guess which is which before revealing.
-<span id="score"></span></p>
 """
 parts.append(PAGE.get("intro", INTRO))
+parts.append(f"""
+<h2 id="samples">Samples</h2>
+<p><label><input type="checkbox" id="blind"> Blind test</label>: shows only "{html.escape(LABELS[BLIND[0]])}" and
+"{html.escape(LABELS[BLIND[1]])}", as A and B in random order, so you can guess which is which before revealing.
+<span id="score"></span></p>
+""")
 
 
 for i, it in enumerate(items):
