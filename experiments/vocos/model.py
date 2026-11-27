@@ -107,10 +107,10 @@ class VocosDecoder(nn.Module):
         x = self.norm(x, cond)
         for block in self.blocks:
             x = block(x, cond, keep)
-        x = self.head(self.final(x, cond)).transpose(1, 2).float()  # [B, 2 * BINS, 2T + 1]
+        # Contiguous: compiled, torch.complex fails on the transposed layout (a stride assertion in torch 2.8).
+        x = self.head(self.final(x, cond)).transpose(1, 2).float().contiguous()  # [B, 2 * BINS, 2T + 1]
         mag = torch.exp(x[:, :BINS].clamp(max=math.log(100.0)))
         phase = x[:, BINS:]
-        # Not torch.polar: compiled, it fails on the transposed layout (a stride assertion in torch 2.8).
         spec = torch.complex(mag * torch.cos(phase), mag * torch.sin(phase))
         audio = torch.istft(spec, N_FFT, HOP, window=self.window, center=True, length=frames * HOP)
         return audio[:, None]
