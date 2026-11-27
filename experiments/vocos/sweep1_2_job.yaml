@@ -1,8 +1,8 @@
 # Stage-one sweep, wave 1: decoder head x loss recipe. Needs ckpt/te-audio.pt, ckpt/bf-v1.pt and
 # ckpt/data/{train,val}.txt in the checkout, untracked.
-name: vocos-sweep1-spec-msmel+filter-msmel
+name: vocos-sweep1-spec-msmel+spec-base-seed1
 setup: bash experiments/vocos/setup.sh
-command: bash experiments/vocos/sweep.sh experiments/vocos/out/sweep1 60000 'spec-msmel={"loss":{"msmel":1,"stft":1}}' 'filter-msmel={"model":{"head":"filter","full_band":true},"loss":{"msmel":1,"stft":1}}'
+command: bash experiments/vocos/sweep.sh experiments/vocos/out/sweep1 60000 'spec-msmel={"loss":{"msmel":1,"stft":1}}' 'spec-base-seed1={"seed":1}'
 gpus: 1
 priority: 12
 env:
@@ -13,5 +13,5 @@ secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
 outputs:
   - path: experiments/vocos/out/sweep1
     s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/sweep1
-estimated_runtime_min: 75
+estimated_runtime_min: 135
 max_runtime_min: 240

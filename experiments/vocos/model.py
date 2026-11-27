@@ -65,7 +65,7 @@ class ConvNeXtBlock(nn.Module):
 
 
 FULL_BAND_HZ = 11500  # the full-band source's harmonics stop here
-MAX_MAGNITUDE = {"spec": 100.0, "filter": 400.0}  # "spec" as trained before; the teacher's largest bin is ~75
+MAX_MAGNITUDE = {"spec": 100.0, "filter": 400.0, "both": 400.0}  # "spec" as trained before; the teacher's largest bin is ~75
 MAX_GAIN = 1e4
 
 
@@ -99,14 +99,14 @@ class VocosDecoder(nn.Module):
     """head "spec": the network's output is the spectrum's log magnitude and phase.
     head "filter": its output is a gain and a phase shift per frequency bin for each of two source
     spectra, Kokoro's harmonic source and (full_band) every harmonic up to FULL_BAND_HZ, and the
-    spectrum is their filtered sum. The noise in Kokoro's source is all the randomness its decoder
+    spectrum is their filtered sum. Head "both": the sum of the two. The noise in Kokoro's source is all the randomness its decoder
     has, and it is too detailed to pass through the network, so a "spec" head can only produce an
     average of what the teacher did with it; a filter passes it through."""
 
     def __init__(self, source: nn.Module, asr_dim=512, style_dim=128, dim=512, layers=8, mult=3,
                  head="spec", full_band=False):
         super().__init__()
-        assert head in MAX_MAGNITUDE and (head == "filter" or not full_band)
+        assert head in MAX_MAGNITUDE and (head != "spec" or not full_band)
         self.config = dict(dim=dim, layers=layers, mult=mult, head=head, full_band=full_band)
         self.head_kind, self.full_band = head, full_band
         sources = 2 if full_band else 1
@@ -118,7 +118,7 @@ class VocosDecoder(nn.Module):
         self.norm = AdaLN(dim, cond_dim)
         self.blocks = nn.ModuleList(ConvNeXtBlock(dim, mult, cond_dim, 1 / layers) for _ in range(layers))
         self.final = AdaLN(dim, cond_dim)
-        self.head = nn.Linear(dim, 2 * BINS * (sources if head == "filter" else 1))
+        self.head = nn.Linear(dim, 2 * BINS * {"spec": 1, "filter": sources, "both": sources + 1}[head])
         self.register_buffer("window", torch.hann_window(N_FFT), persistent=False)
 
     def harmonic_source(self, f0):
@@ -166,8 +166,11 @@ class VocosDecoder(nn.Module):
             for i, sp in enumerate(specs):
                 gain, shift = x[:, 2 * i * BINS : (2 * i + 1) * BINS], x[:, (2 * i + 1) * BINS : (2 * i + 2) * BINS]
                 spec = spec + torch.polar(torch.exp(gain.clamp(max=math.log(MAX_GAIN))), shift) * sp
+            if self.head_kind == "both":
+                own = x[:, -2 * BINS :]
+                spec = spec + torch.polar(torch.exp(own[:, :BINS].clamp(max=math.log(MAX_MAGNITUDE["both"]))), own[:, BINS:])
             mag = spec.abs()
-            spec = spec * (mag.clamp(max=MAX_MAGNITUDE["filter"]) / (mag + 1e-9))
+            spec = spec * (mag.clamp(max=MAX_MAGNITUDE[self.head_kind]) / (mag + 1e-9))
         audio = torch.istft(spec, N_FFT, HOP, window=self.window, center=True, length=frames * HOP)
         return audio[:, None]
 
