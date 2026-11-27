@@ -1,0 +1,17 @@
+# Stage-one sweep, wave 3: the two best of waves 1 and 2 for 200,000 steps instead of 60,000. Needs ckpt/te-audio.pt, ckpt/bf-v1.pt and
+# ckpt/data/{train,val}.txt in the checkout, untracked.
+name: vocos-sweep3-long
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/vocos/sweep.sh experiments/vocos/out/sweep3 200000 'both-phase-200k={"model":{"head":"both","full_band":true},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}' 'spec-phase-200k={"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}'
+gpus: 1
+priority: 20
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
+outputs:
+  - path: experiments/vocos/out/sweep3
+    s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/sweep3
+estimated_runtime_min: 440
+max_runtime_min: 560
