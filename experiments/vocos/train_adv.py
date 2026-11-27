@@ -3,8 +3,10 @@
 Paradee (arXiv:2610.06817) found a decoder trained with spectral losses alone kept crisp harmonics
 where the teacher's turn breathy, which sounded robotic, and that the critics only took effect
 once the spectral losses stopped dominating: HiFi-GAN's weight of 45 barely moved it, 10 and then 3
-did. So the generator's loss is adversarial + 2 x feature matching + SPECTRAL x (mel + STFT), with
-SPECTRAL 10 for the first half of the steps and 3 for the second.
+did. So the generator's loss is adversarial + 2 x feature matching + SPECTRAL x (mel + STFT + level),
+with SPECTRAL 10 for the first half of the steps and 3 for the second. "level" is the L1 distance
+between the log energies of each decoder frame (300 samples): on v1, with only mel and STFT, stage
+two came out about 1 dB quieter than the teacher over whole sentences.
 
 usage: train_adv.py CORPUS_DIR VAL_CORPUS_DIR INIT_PT OUT_PT STEPS
 """
@@ -25,6 +27,13 @@ STEPS = int(sys.argv[5])
 BATCH = 8
 LR = 2e-4
 FEATURE_MATCHING = 2.0
+
+
+def level_loss(fake, real):
+    energy = lambda a: a.reshape(a.shape[0], -1, 300).pow(2).mean(-1)  # noqa: E731
+    return (torch.log(energy(fake) + 1e-6) - torch.log(energy(real) + 1e-6)).abs().mean()
+
+
 dev = "cuda"
 torch.manual_seed(0)
 rng = random.Random(1)
@@ -59,8 +68,8 @@ for step in range(1, STEPS + 1):
 
     with torch.autocast("cuda", dtype=torch.bfloat16):
         adv, fm = generator_losses(disc(real), disc(fake))
-    spec = spectral(fake, real)
-    g_loss = adv + FEATURE_MATCHING * fm + weight * (spec["mel"] + spec["stft"])
+    spec = {**spectral(fake, real), "level": level_loss(fake, real)}
+    g_loss = adv + FEATURE_MATCHING * fm + weight * (spec["mel"] + spec["stft"] + spec["level"])
     g_loss.backward()
     torch.nn.utils.clip_grad_norm_(g_params, 10.0)
     opt_g.step()

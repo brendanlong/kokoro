@@ -1,0 +1,13 @@
+# Needs ckpt/{te-audio,bf-v1,vocos-v2}.pt and ckpt/data in the checkout, and the corpus run.sh makes.
+name: vocos-adv-v2
+setup: bash experiments/lstm_swap/setup.sh
+command: bash experiments/vocos/run_adv.sh experiments/vocos/out/adv-v2 ckpt/vocos-v2.pt 16000
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 250

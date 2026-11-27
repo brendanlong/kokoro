@@ -5,7 +5,8 @@ LSTM-swap students ("lstmfree"), the corpus teacher ("teacher": the LSTM-swap te
 batch-first F0/N predictor and Kokoro's decoder) and the same with the Vocos-style decoder
 ("vocos"). Word error rate is Whisper's transcript against its transcript of the original. The
 other measures force the timing to the reference's, so they compare sound, not timing: per-token
-loudness difference (dB), log-spectrogram correlation and pitch RMSE on voiced frames. Each
+loudness difference (dB), log-spectrogram correlation and pitch RMSE on voiced frames, and the
+signed difference in overall speech level (dB, negative is quieter). Each
 variant is compared with the original, and the Vocos decoder also with its teacher (same inputs).
 
 usage: eval.py DATA_DIR STUDENTS_PT FRAME_SIDE_PT DECODER_PT OUT_JSON
@@ -74,10 +75,18 @@ def loud_db(a, b, dur):
     return float(np.abs(da - dbb)[da > da.max() - 40].mean())
 
 
+def speech_level_db(a):
+    """Level of the speech, ignoring pauses: mean power of the 50 ms frames within 30 dB of the loudest."""
+    fr = a[: len(a) // 1200 * 1200].reshape(-1, 1200)
+    e = 10 * np.log10((fr ** 2).mean(1) + 1e-12)
+    return float(10 * np.log10(np.mean(10 ** (e[e > e.max() - 30] / 10))))
+
+
 def compare(ref, other):
     voiced = ref["F0"] > 10
     a, b = ref["audio"].numpy(), other["audio"].numpy()
     return dict(corr=corr(a, b), loud_db=loud_db(a, b, ref["pred_dur"]),
+                level_db=speech_level_db(b) - speech_level_db(a),  # signed: negative is quieter
                 f0_rmse_hz=float(((ref["F0"] - other["F0"])[voiced] ** 2).mean().sqrt()))
 
 
