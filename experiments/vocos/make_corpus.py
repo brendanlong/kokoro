@@ -38,7 +38,7 @@ import students as st  # noqa: E402
 logger.remove()
 DATA, STUDENTS, FRAME_SIDE, OUT, SPLIT, N = sys.argv[1:7]
 N = int(N)
-dev = "cuda"
+dev = "cuda" if torch.cuda.is_available() else "cpu"
 rng = random.Random(0 if SPLIT == "train" else 1)
 
 kokoro = KModel(repo_id="hexgrad/Kokoro-82M").eval()

@@ -44,8 +44,7 @@ def with_students(spec):
         sys.path.insert(0, os.path.join(HERE, "..", "vocos"))
         import model as vm
 
-        m.decoder = vm.from_kokoro(teacher.decoder)
-        m.decoder.load_state_dict(torch.load(decoder, weights_only=True)["state"])
+        m.decoder = vm.load(teacher.decoder, decoder)
     return m.to(dev).eval()
 
 

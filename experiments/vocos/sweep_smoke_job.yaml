@@ -1,0 +1,20 @@
+# A few minutes of two sweep runs on a 40-sentence corpus, to check a host before the sweep. Needs ckpt/te-audio.pt, ckpt/bf-v1.pt and
+# ckpt/data/{train,val}.txt in the checkout, untracked.
+name: vocos-sweep-smoke
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/vocos/sweep.sh experiments/vocos/out/smoke 400 'spec-phase={"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}' 'filter-phase={"model":{"head":"filter","full_band":true},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}'
+gpus: 1
+priority: 1
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  CORPUS_NAME: kokoro-vocos-smoke
+  TRAIN_N: "40"
+  VAL_N: "4"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
+outputs:
+  - path: experiments/vocos/out/smoke
+    s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/smoke
+estimated_runtime_min: 15
+max_runtime_min: 45

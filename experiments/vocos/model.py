@@ -64,18 +64,61 @@ class ConvNeXtBlock(nn.Module):
         return x + self.scale * self.pw2(F.gelu(self.pw1(self.norm(h, cond))))
 
 
+FULL_BAND_HZ = 11500  # the full-band source's harmonics stop here
+MAX_MAGNITUDE = {"spec": 100.0, "filter": 400.0}  # "spec" as trained before; the teacher's largest bin is ~75
+MAX_GAIN = 1e4
+
+
+def full_band_source(f0, cycles0=None):
+    """Every harmonic of F0 up to FULL_BAND_HZ, in phase with the fundamental of Kokoro's source.
+
+    f0 [B, F] (Hz, 80 per second) -> [B, 300 F] samples. Kokoro's source has the fundamental and 8
+    overtones; its generator makes the higher harmonics itself, locked to those. This is the sum of
+    sin(k phase) for every k with k F0 under FULL_BAND_HZ, where phase is the fundamental's as
+    Kokoro's SineGen computes it (a running sum of F0 per frame, interpolated to samples), so a
+    filter on it can place harmonics where the teacher has them. `cycles0` [B] is the running sum
+    before the first frame, for a crop of a sentence. The sum has a closed form, so the cost
+    doesn't grow with the number of harmonics.
+    """
+    f0 = f0.double()
+    cycles = ((f0 / SAMPLE_RATE) % 1).cumsum(1)
+    if cycles0 is not None:
+        cycles = cycles + cycles0.double()[:, None]
+    cycles = F.interpolate(cycles[:, None] * HOP, scale_factor=HOP, mode="linear")[:, 0]
+    half = math.pi * (cycles % 1)  # half the fundamental's phase
+    f0 = f0.repeat_interleave(HOP, dim=1)
+    voiced = f0 > 10
+    k = torch.floor(FULL_BAND_HZ / f0.clamp(min=10)) * voiced
+    denom = torch.sin(half)
+    safe = denom.abs() > 1e-6
+    total = torch.sin(k * half) * torch.sin((k + 1) * half) / torch.where(safe, denom, torch.ones_like(denom))
+    return (0.1 * total * safe / k.clamp(min=1).sqrt()).float()
+
+
 class VocosDecoder(nn.Module):
-    def __init__(self, source: nn.Module, asr_dim=512, style_dim=128, dim=512, layers=8, mult=3):
+    """head "spec": the network's output is the spectrum's log magnitude and phase.
+    head "filter": its output is a gain and a phase shift per frequency bin for each of two source
+    spectra, Kokoro's harmonic source and (full_band) every harmonic up to FULL_BAND_HZ, and the
+    spectrum is their filtered sum. The noise in Kokoro's source is all the randomness its decoder
+    has, and it is too detailed to pass through the network, so a "spec" head can only produce an
+    average of what the teacher did with it; a filter passes it through."""
+
+    def __init__(self, source: nn.Module, asr_dim=512, style_dim=128, dim=512, layers=8, mult=3,
+                 head="spec", full_band=False):
         super().__init__()
+        assert head in MAX_MAGNITUDE and (head == "filter" or not full_band)
+        self.config = dict(dim=dim, layers=layers, mult=mult, head=head, full_band=full_band)
+        self.head_kind, self.full_band = head, full_band
+        sources = 2 if full_band else 1
         # Kokoro's harmonic source, frozen: the sines at F0 and its overtones, mixed by one linear layer.
         self.source = copy.deepcopy(source).requires_grad_(False)
         cond_dim = style_dim + FRAME_FEATURES
         self.embed = nn.Conv1d(asr_dim + FRAME_FEATURES, dim, 7, padding=3)
-        self.embed_source = nn.Linear(3 * BINS, dim)
+        self.embed_source = nn.Linear(3 * BINS * sources, dim)
         self.norm = AdaLN(dim, cond_dim)
         self.blocks = nn.ModuleList(ConvNeXtBlock(dim, mult, cond_dim, 1 / layers) for _ in range(layers))
         self.final = AdaLN(dim, cond_dim)
-        self.head = nn.Linear(dim, 2 * BINS)
+        self.head = nn.Linear(dim, 2 * BINS * (sources if head == "filter" else 1))
         self.register_buffer("window", torch.hann_window(N_FFT), persistent=False)
 
     def harmonic_source(self, f0):
@@ -85,14 +128,22 @@ class VocosDecoder(nn.Module):
             har = self.source(f0)[0]
         return har.transpose(1, 2).squeeze(1)
 
-    def forward(self, asr, F0_curve, N, s, source=None):
+    def _stft(self, x):
+        return torch.stft(x.float(), N_FFT, HOP, window=self.window, center=True, return_complex=True)
+
+    def forward(self, asr, F0_curve, N, s, source=None, cycles0=None):
         """asr [B, 512, T] (40 frames per second), F0_curve and N [B, 2T], s [B, 128] ->
-        audio [B, 1, 600 T]. `source` is the harmonic source (computed from F0 if not given)."""
+        audio [B, 1, 600 T]. `source` is the harmonic source (computed from F0 if not given);
+        `cycles0` is full_band_source's, for crops."""
         if source is None:
             source = self.harmonic_source(F0_curve)
         frames = F0_curve.shape[1]  # 2T; the STFT has one more (center=True)
-        spec = torch.stft(source.float(), N_FFT, HOP, window=self.window, center=True, return_complex=True)
-        src = torch.cat([torch.log(spec.abs() + 1e-5), torch.cos(spec.angle()), torch.sin(spec.angle())], dim=1)
+        specs = [self._stft(source)]
+        if self.full_band:
+            specs.append(self._stft(full_band_source(F0_curve, cycles0)))
+        src = torch.cat([f(sp) for sp in specs for f in (lambda z: torch.log(z.abs() + 1e-5),
+                                                         lambda z: torch.cos(z.angle()),
+                                                         lambda z: torch.sin(z.angle()))], dim=1)
 
         voiced = (F0_curve > 10).float()
         frame = torch.stack([torch.log(F0_curve.clamp(min=10)) * voiced, voiced, N.float()], dim=1)
@@ -107,10 +158,16 @@ class VocosDecoder(nn.Module):
         x = self.norm(x, cond)
         for block in self.blocks:
             x = block(x, cond, keep)
-        x = self.head(self.final(x, cond)).transpose(1, 2).float()  # [B, 2 * BINS, 2T + 1]
-        mag = torch.exp(x[:, :BINS].clamp(max=math.log(100.0)))
-        phase = x[:, BINS:]
-        spec = torch.polar(mag, phase)
+        x = self.head(self.final(x, cond)).transpose(1, 2).float()  # [B, 2 * BINS (* sources), 2T + 1]
+        if self.head_kind == "spec":
+            spec = torch.polar(torch.exp(x[:, :BINS].clamp(max=math.log(MAX_MAGNITUDE["spec"]))), x[:, BINS:])
+        else:
+            spec = 0
+            for i, sp in enumerate(specs):
+                gain, shift = x[:, 2 * i * BINS : (2 * i + 1) * BINS], x[:, (2 * i + 1) * BINS : (2 * i + 2) * BINS]
+                spec = spec + torch.polar(torch.exp(gain.clamp(max=math.log(MAX_GAIN))), shift) * sp
+            mag = spec.abs()
+            spec = spec * (mag.clamp(max=MAX_MAGNITUDE["filter"]) / (mag + 1e-9))
         audio = torch.istft(spec, N_FFT, HOP, window=self.window, center=True, length=frames * HOP)
         return audio[:, None]
 
@@ -118,3 +175,11 @@ class VocosDecoder(nn.Module):
 def from_kokoro(decoder: nn.Module, **kw) -> VocosDecoder:
     """A VocosDecoder with Kokoro decoder's harmonic source (its only reused part)."""
     return VocosDecoder(decoder.generator.m_source, **kw)
+
+
+def load(decoder: nn.Module, path: str) -> VocosDecoder:
+    """The VocosDecoder a checkpoint holds, built as its saved config says."""
+    ckpt = torch.load(path, weights_only=True, map_location="cpu")
+    vocos = from_kokoro(decoder, **ckpt.get("config", {}))
+    vocos.load_state_dict(ckpt["state"])
+    return vocos

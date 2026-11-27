@@ -46,10 +46,10 @@ log.write(json.dumps(rec) + "\n")
 t0, running = time.time(), {}
 for step in range(1, STEPS + 1):
     weight = 10.0 if step <= STEPS // 2 else 3.0
-    asr, f0, n, audio, source, style = train.crops(rng, BATCH)
+    asr, f0, n, audio, source, style, cycles0 = train.crops(rng, BATCH)
     real = audio[:, common.SCORED]
     with torch.autocast("cuda", dtype=torch.bfloat16):
-        fake = decoder(asr, f0, n, style, source=source)[:, 0, common.SCORED].float()
+        fake = decoder(asr, f0, n, style, source=source, cycles0=cycles0)[:, 0, common.SCORED].float()
 
         d_loss = discriminator_loss(disc(real), disc(fake.detach()))
     d_loss.backward()
@@ -59,7 +59,7 @@ for step in range(1, STEPS + 1):
 
     with torch.autocast("cuda", dtype=torch.bfloat16):
         adv, fm = generator_losses(disc(real), disc(fake))
-    spec = spectral(fake, real)
+    spec = spectral(fake, real, ("mel", "stft"))
     g_loss = adv + FEATURE_MATCHING * fm + weight * (spec["mel"] + spec["stft"])
     g_loss.backward()
     torch.nn.utils.clip_grad_norm_(g_params, 10.0)
