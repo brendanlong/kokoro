@@ -21,7 +21,7 @@ import students as st
 logger.remove()
 OUT = sys.argv[1]
 HERE = os.path.dirname(os.path.abspath(__file__))
-dev = "cuda"
+dev = "cuda" if torch.cuda.is_available() else "cpu"
 os.makedirs(OUT, exist_ok=True)
 
 teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)

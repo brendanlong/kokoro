@@ -1,11 +1,15 @@
 """The listening page's HTML fragment, from listen.py's samples.json (fill it with the html-doc template).
 
-usage: listen_page.py SAMPLES_JSON OUT_HTML"""
+usage: listen_page.py SAMPLES_JSON OUT_HTML [PAGE_JSON]
+
+PAGE_JSON replaces the page's own text: {"labels": {variant: label}, "blind": [reference, other],
+"intro": the HTML before the samples}."""
 import html
 import json
 import sys
 
 SAMPLES, OUT = sys.argv[1:3]
+PAGE = json.load(open(sys.argv[3])) if len(sys.argv) > 3 else {}
 items = json.load(open(SAMPLES))
 
 LABELS = {
@@ -16,6 +20,8 @@ LABELS = {
     "vocos": "Vocos-style decoder, spectral losses only",
 }
 BLIND = ("original", "vocos")
+if PAGE:
+    LABELS, BLIND = PAGE["labels"], tuple(PAGE["blind"])
 
 parts = ["""
 <style>
@@ -32,6 +38,8 @@ body.blind .clip-row:not(.ab) { display: none; }
 #score { font-weight: 600; }
 </style>
 
+"""]
+INTRO = """
 <p>Each sentence is read by the original Kokoro-82M, the LSTM-free model, the batch-first model (per-frame
 normalization in Kokoro's decoder layout, from November 26), and a new Vocos-style decoder. The Vocos-style
 decoder replaces Kokoro's 53M-parameter decoder, which upsamples 300-fold through many convolution layers, with
@@ -62,7 +70,9 @@ local GPU (60,000 steps of 16 crops of 1.6 s from 22 hours of teacher audio in a
 <h2 id="samples">Samples</h2>
 <p><label><input type="checkbox" id="blind"> Blind test</label>: shows only the original and the batch-first model, as A and B in random order, so you can guess which is which before revealing.
 <span id="score"></span></p>
-"""]
+"""
+parts.append(PAGE.get("intro", INTRO))
+
 
 for i, it in enumerate(items):
     rows = []
@@ -78,13 +88,13 @@ for i, it in enumerate(items):
 <div class="meta">{html.escape(it["source"])} · voice {html.escape(it["voice"])}</div>
 <div class="text">{html.escape(it["text"])}</div>
 <div class="clips">{"".join(rows)}</div>
-<div class="blind-controls">Which is the original?
+<div class="blind-controls">Which is the {html.escape(LABELS[BLIND[0]])}?
 <button data-guess="A">A</button><button data-guess="B">B</button>
 <button data-guess="?">Can't tell</button>
 <span class="verdict"></span></div>
 </div>""")
 
-parts.append("<script>const KEYS = " + json.dumps(list(LABELS)) + ";</script>")
+parts.append("<script>const KEYS = " + json.dumps(list(LABELS)) + "; const REF = " + json.dumps(BLIND[0]) + ";</script>")
 parts.append("""
 <script>
 let right = 0, answered = 0;
@@ -115,12 +125,12 @@ for (const b of document.querySelectorAll("[data-guess]")) b.addEventListener("c
   if (s.dataset.answered) return;
   s.dataset.answered = "1";
   const ab = [...s.querySelectorAll(".clip-row.ab")];
-  const orig = "ABCD"[ab.findIndex(r => r.dataset.key === "original")];
+  const orig = "ABCD"[ab.findIndex(r => r.dataset.key === REF)];
   const g = b.dataset.guess;
   answered++;
   if (g === orig) right++;
   s.querySelector(".verdict").textContent =
-    (g === "?" ? "" : g === orig ? "Right. " : "Wrong. ") + `The original was ${orig}.`;
+    (g === "?" ? "" : g === orig ? "Right. " : "Wrong. ") + `It was ${orig}.`;
   ab.forEach(r => { const l = r.querySelector(".label"); l.textContent += " = " + l.dataset.real; });
   document.getElementById("score").textContent = `${right} of ${answered} right`;
 });
