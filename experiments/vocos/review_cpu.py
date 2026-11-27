@@ -50,9 +50,7 @@ adaln.load_frame_side(front, torch.load(FRAME_SIDE, weights_only=True)["state"])
 front = front.eval()
 teacher_dec = kokoro.decoder
 gen = teacher_dec.generator
-vocos = vm.from_kokoro(teacher_dec)
-vocos.load_state_dict(torch.load(DECODER, weights_only=True)["state"])
-vocos = vocos.eval()
+vocos = vm.load(teacher_dec, DECODER).eval()
 
 voices = {v: torch.load(hf_hub_download("hexgrad/Kokoro-82M", f"voices/{v}.pt"), weights_only=True)
           for v in ("af_heart", "am_adam", "bf_emma", "bm_george")}
