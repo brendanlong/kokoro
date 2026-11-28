@@ -1,0 +1,12 @@
+# Needs the checkpoints run_transfer.sh names in the checkout (untracked).
+name: vocos-transfer
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/vocos/run_transfer.sh
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 40
