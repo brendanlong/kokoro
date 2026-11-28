@@ -19,8 +19,10 @@ LABELS = {
     "teacher": "Batch-first (per-frame normalization, Kokoro's decoder layout)",
     "vocos": "Vocos-style decoder, stage one (spectral losses only)",
     "vocos_adv": "Vocos-style decoder, stage two (adversarial)",
+    "phase_s1": "Vocos-style v2, stage one with phase losses (Nov 27)",
+    "phase_adv": "Vocos-style v2, stage two from it (Nov 27): the candidate",
 }
-BLIND = ("original", "vocos")
+BLIND = ("original", "phase_adv")
 if PAGE:
     LABELS, BLIND = PAGE["labels"], tuple(PAGE["blind"])
 
@@ -65,17 +67,25 @@ decoder.</p>
 <tr><td>Batch-first (Nov 26)</td><td>0.66%</td><td>1.34 dB</td><td>0.915</td></tr>
 <tr><td>Vocos-style, stage one</td><td>0.88%</td><td>1.31 dB</td><td>0.923</td></tr>
 <tr><td>Vocos-style, stage two (adversarial)</td><td>1.32%</td><td>1.69 dB</td><td>0.907</td></tr>
+<tr><td>v2 stage two from phase-loss stage one (Nov 27)</td><td>0.99%</td><td>1.39 dB</td><td>0.916</td></tr>
 </tbody>
 </table>
-<p>Against its teacher (same inputs): stage one 1.11 dB, 0.942; stage two 1.53 dB, 0.924. Speed of the decoder alone (plain PyTorch, fp16, RTX 3060 Ti, uncompiled): 3.2 ms per
+<p>November 27: a parallel review session found that phase-aware losses in stage one (multi-scale mel, STFT,
+phase differences and a compressed complex-spectrum loss, possible because the teacher's source makes the target
+exact) cut the phase error in voiced 2-8 kHz from 1.22 to 0.81; the candidate is stage two (16,000 adversarial
+steps, with a per-frame level loss added) from that. Its overall speech level is 0.71 dB below the original's
+(v1's stage two: about 1 dB). Against its teacher (same inputs): stage one 1.11 dB, 0.942; stage two 1.53 dB, 0.924;
+the candidate 1.19 dB, 0.934. Speed of the decoder alone (plain PyTorch, fp16, RTX 3060 Ti, uncompiled): 3.2 ms per
 sentence, 1,738x realtime, against 36 ms and 149x for Kokoro's decoder. Stage one took 37 minutes on the
 local GPU (60,000 steps of 16 crops of 1.6 s from 22 hours of teacher audio in all 54 voices, English text).</p>
-
-<h2 id="samples">Samples</h2>
-<p><label><input type="checkbox" id="blind"> Blind test</label>: shows only the original and the batch-first model, as A and B in random order, so you can guess which is which before revealing.
-<span id="score"></span></p>
 """
 parts.append(PAGE.get("intro", INTRO))
+parts.append(f"""
+<h2 id="samples">Samples</h2>
+<p><label><input type="checkbox" id="blind"> Blind test</label>: shows only "{html.escape(LABELS[BLIND[0]])}" and
+"{html.escape(LABELS[BLIND[1]])}", as A and B in random order, so you can guess which is which before revealing.
+<span id="score"></span></p>
+""")
 
 
 for i, it in enumerate(items):

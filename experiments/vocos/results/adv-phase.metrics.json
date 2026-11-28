@@ -1,0 +1,35 @@
+{
+ "config": {
+  "loss": {
+   "msmel": 1,
+   "stft": 1,
+   "phase": 1,
+   "cplx": 1
+  },
+  "init": "ckpt/vocos-phase.pt",
+  "model": {
+   "dim": 512,
+   "layers": 8,
+   "mult": 3,
+   "head": "spec",
+   "full_band": false
+  }
+ },
+ "steps": 16000,
+ "metrics": {
+  "mel": 0.57277,
+  "stft": 1.01981,
+  "msmel": 0.29103,
+  "phase": 0.6826,
+  "cplx": 0.28322,
+  "voiced_2_8k_phase": 0.84917,
+  "voiced_2_8k_bin_step": 0.69577,
+  "voiced_2_8k_frame_step": 0.72907,
+  "level_abs_db": 1.52431,
+  "level_bias_voiced_db": -0.72338,
+  "level_bias_unvoiced_db": -0.38355,
+  "periodicity_rmse": 0.16292,
+  "vuv_f1": 0.91075,
+  "pitch_rmse_cents": 26.798
+ }
+}
