@@ -4,6 +4,8 @@ Stage "local": each student sees the teacher's input to its LSTM and regresses t
 Stage "chain": all students installed at once; match the teacher's continuous durations, F0, N
 and text-encoder output, so the students learn to correct each other's errors.
 
+Text in every language (multidata.py), each read by its own voices.
+
 usage: train.py DATA_DIR OUT_PT LOCAL_STEPS CHAIN_STEPS [ARCH_JSON]
 ARCH_JSON maps LSTM paths to overrides of students.DEFAULT_ARCH."""
 import copy
@@ -16,11 +18,11 @@ import time
 
 import torch
 import torch.nn.functional as F
-from huggingface_hub import hf_hub_download, list_repo_files
 from loguru import logger
 
 from kokoro import KModel
 import seqfwd
+import multidata
 import students as st
 
 logger.remove()
@@ -28,6 +30,7 @@ DATA, OUT = sys.argv[1], sys.argv[2]
 LOCAL_STEPS, CHAIN_STEPS = int(sys.argv[3]), int(sys.argv[4])
 ARCH = json.loads(sys.argv[5]) if len(sys.argv) > 5 else {}
 ACCUM, LR = 16, 1e-3
+VAL_PER_LANG = 10
 dev = "cuda"
 torch.manual_seed(0)
 random.seed(0)
@@ -35,24 +38,17 @@ random.seed(0)
 teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
 for p in teacher.parameters():
     p.requires_grad_(False)
-voice_files = [f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/") and f[7] in "ab"]
-voices = [torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True) for f in voice_files]
-train = open(os.path.join(DATA, "train.txt")).read().split("\n")[:-1]
-val = open(os.path.join(DATA, "val.txt")).read().split("\n")[:-1][:100]
-val_voices = [random.randrange(len(voices)) for _ in val]
+text = multidata.Text(DATA, teacher.vocab, dev, max_ids=510, val_per_lang=VAL_PER_LANG)
 studs = st.make_students(teacher, ARCH)
 for m in studs.values():
     m.to(dev)
 params = [p for m in studs.values() for p in m.parameters()]
-print("voices", len(voices), "train", len(train), "student params M", round(sum(p.numel() for p in params) / 1e6, 2),
+print("languages", text.langs, "val", len(text.val), "student params M", round(sum(p.numel() for p in params) / 1e6, 2),
       "lstm params M", round(sum(p.numel() for path in studs for p in teacher.get_submodule(path).parameters()) / 1e6, 2), flush=True)
 student_model = copy.deepcopy(teacher)
 st.install(student_model, studs)
 
 
-def inputs(ps, voice_idx):
-    ids = torch.LongTensor([[0, *[teacher.vocab[p] for p in ps if p in teacher.vocab], 0]]).to(dev)
-    return ids, voices[voice_idx][len(ps) - 1].to(dev)
 
 
 captured = {}
@@ -99,10 +95,9 @@ def chain_losses(ids, ref):
 @torch.no_grad()
 def validate():
     tot = {}
-    for ps, v in zip(val, val_voices):
-        ids, ref = inputs(ps, v)
+    for ids, ref in text.val:
         for k, x in {**local_losses(ids, ref), **chain_losses(ids, ref)}.items():
-            tot[k] = tot.get(k, 0) + x.item() / len(val)
+            tot[k] = tot.get(k, 0) + x.item() / len(text.val)
     return {k: round(v, 5) for k, v in tot.items()}
 
 
@@ -119,7 +114,7 @@ for stage, steps in [("local", LOCAL_STEPS), ("chain", CHAIN_STEPS)]:
     for step in range(1, steps + 1):
         running = {}
         for _ in range(ACCUM):
-            ids, ref = inputs(random.choice(train), random.randrange(len(voices)))
+            ids, ref = text.sample(random)
             losses = fn(ids, ref)
             (sum(losses.values()) / ACCUM).backward()
             for k, v in losses.items():

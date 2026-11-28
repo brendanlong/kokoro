@@ -1,16 +1,16 @@
-"""Distill Kokoro's frame side (F0/N predictor and decoder) into a batch-first one (adaln.py).
+"""Distill Kokoro's F0/N predictor into a batch-first one (adaln.py).
 
 The teacher is Kokoro with the LSTM-swap students (STUDENTS_PT, what the worker deploys), and the
-student is the same model with AdaLN1d in its frame side, starting from the teacher's weights.
-Only the frame side trains; the text side is shared and frozen, so the decoder learns from the
-text features it will be given (Paradee, arXiv:2610.06817, found features tuned to one decoder
-don't transfer to another).
+student is the same model with AdaLN1d in its F0/N predictor, starting from the teacher's weights.
+Only the predictor trains; the text side is shared and frozen. (Until 2026-11-28 this also trained
+an AdaLN version of Kokoro's decoder; the Vocos-style decoder replaced it. Checkpoints still hold
+the whole frame side, adaln.FRAME_SIDE, with the decoder as initialized.)
 
-Stage "local": each residual block (AdainResBlk1d, AdaINResBlock1) is given the teacher block's
-input and regresses its output.
-Stage "chain": the student's F0/N predictor matches the teacher's F0 and N from the teacher's
-features, and the student decoder, given the teacher's features, F0, N, style and random numbers
-(the same seed), matches the teacher's audio with a multi-resolution STFT loss.
+Stage "local": each predictor block (AdainResBlk1d) is given the teacher block's input and
+regresses its output.
+Stage "chain": the student's predictor matches the teacher's F0 and N from the teacher's features.
+
+Text in every language (multidata.py), each read by its own voices.
 
 usage: train.py DATA_DIR STUDENTS_PT OUT_PT LOCAL_STEPS CHAIN_STEPS [INIT_PT]
 """
@@ -23,16 +23,16 @@ import time
 
 import torch
 import torch.nn.functional as F
-from huggingface_hub import hf_hub_download, list_repo_files
 from loguru import logger
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "lstm_swap"))
 
 from kokoro import KModel  # noqa: E402
-from kokoro.istftnet import AdaINResBlock1, AdainResBlk1d  # noqa: E402
+from kokoro.istftnet import AdainResBlk1d  # noqa: E402
 import adaln  # noqa: E402
 import seqfwd  # noqa: E402
+import multidata  # noqa: E402
 import students as st  # noqa: E402
 
 logger.remove()
@@ -41,9 +41,9 @@ LOCAL_STEPS, CHAIN_STEPS = int(sys.argv[4]), int(sys.argv[5])
 INIT = sys.argv[6] if len(sys.argv) > 6 else None
 ACCUM = 8
 LR = {"local": 2e-4, "chain": 1e-4}
-# The decoder's backward pass on longer sentences doesn't fit beside the desktop on the 8 GB card
-# (100 ran out of memory). 64 phonemes is about 4 s of audio.
-MAX_PHONEMES = 64
+MAX_PHONEMES = 510
+VAL_PER_LANG = 6
+PREDICTOR = [p for p in adaln.FRAME_SIDE if p.startswith("predictor.")]
 dev = "cuda"
 torch.manual_seed(0)
 random.seed(0)
@@ -55,19 +55,15 @@ student = adaln.make_student(teacher).to(dev)
 if INIT:
     adaln.load_frame_side(student, torch.load(INIT, weights_only=True)["state"])
 params = []
-for p in adaln.FRAME_SIDE:
+for p in PREDICTOR:
     params += list(student.get_submodule(p).requires_grad_(True).parameters())
 student.train()
 
-voice_files = [f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/") and f[7] in "ab"]
-voices = [torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True) for f in voice_files]
-train = [ps for ps in open(os.path.join(DATA, "train.txt")).read().split("\n")[:-1] if len(ps) <= MAX_PHONEMES]
-val = [ps for ps in open(os.path.join(DATA, "val.txt")).read().split("\n")[:-1][:100] if len(ps) <= MAX_PHONEMES][:40]
-val_voices = [random.randrange(len(voices)) for _ in val]
-print("train", len(train), "val", len(val), "trainable params M", round(sum(p.numel() for p in params) / 1e6, 2), flush=True)
+text = multidata.Text(DATA, teacher.vocab, dev, max_ids=MAX_PHONEMES, val_per_lang=VAL_PER_LANG)
+print("languages", text.langs, "val", len(text.val), "trainable params M", round(sum(p.numel() for p in params) / 1e6, 2), flush=True)
 
 BLOCKS = [name for name, m in teacher.named_modules()
-          if isinstance(m, (AdainResBlk1d, AdaINResBlock1)) and name.startswith(("predictor.F0", "predictor.N", "decoder"))]
+          if isinstance(m, AdainResBlk1d) and name.startswith(("predictor.F0", "predictor.N"))]
 captured = {}
 capturing = False
 
@@ -82,33 +78,13 @@ def capture(name):
 for name in BLOCKS:
     teacher.get_submodule(name).register_forward_hook(capture(name))
 
-
-def inputs(ps, voice_idx):
-    ids = torch.LongTensor([[0, *[teacher.vocab[p] for p in ps if p in teacher.vocab], 0]]).to(dev)
-    return ids, voices[voice_idx][len(ps) - 1].to(dev)
-
-
 @torch.no_grad()
-def teacher_pass(ids, ref, seed):
+def teacher_pass(ids, ref):
     captured.clear()
     d, _, pred_dur = seqfwd.text_half(teacher, ids, ref)
-    aln = seqfwd.alignment(pred_dur)
-    en = d.transpose(-1, -2) @ aln
+    en = d.transpose(-1, -2) @ seqfwd.alignment(pred_dur)
     F0, N = seqfwd.prosody(teacher.predictor, en, ref[:, 128:])
-    asr = seqfwd.text_encoder(teacher.text_encoder, ids) @ aln
-    torch.manual_seed(seed)
-    audio = teacher.decoder(asr, F0, N, ref[:, :128]).squeeze()
-    return dict(en=en, F0=F0, N=N, asr=asr, audio=audio)
-
-
-def stft_loss(a, b):
-    total = 0
-    for n_fft, hop in ((512, 128), (1024, 256), (2048, 512)):
-        w = torch.hann_window(n_fft, device=a.device)
-        A = torch.stft(a, n_fft, hop, window=w, return_complex=True).abs().clamp(min=1e-5)
-        B = torch.stft(b, n_fft, hop, window=w, return_complex=True).abs().clamp(min=1e-5)
-        total = total + (A.log() - B.log()).abs().mean() + torch.linalg.norm(A - B) / torch.linalg.norm(B)
-    return total / 3
+    return dict(en=en, F0=F0, N=N)
 
 
 def local_losses(ids, ref, scale=None):
@@ -116,7 +92,7 @@ def local_losses(ids, ref, scale=None):
     only one block's activations are held at a time."""
     global capturing
     capturing = True
-    teacher_pass(ids, ref, 0)
+    teacher_pass(ids, ref)
     capturing = False
     total = 0.0
     for name, (x, s, y) in captured.items():
@@ -129,26 +105,18 @@ def local_losses(ids, ref, scale=None):
 
 
 def chain_losses(ids, ref):
-    seed = random.randrange(2**31)
-    t = teacher_pass(ids, ref, seed)
+    t = teacher_pass(ids, ref)
     F0, N = seqfwd.prosody(student.predictor, t["en"], ref[:, 128:])
-    torch.manual_seed(seed)
-    audio = student.decoder(t["asr"], t["F0"], t["N"], ref[:, :128]).squeeze()
-    return {
-        "F0": F.smooth_l1_loss(F0 / 50, t["F0"] / 50),
-        "N": F.smooth_l1_loss(N, t["N"]),
-        "stft": stft_loss(audio, t["audio"]),
-    }
+    return {"F0": F.smooth_l1_loss(F0 / 50, t["F0"] / 50), "N": F.smooth_l1_loss(N, t["N"])}
 
 
 @torch.no_grad()
 def validate():
     student.eval()
     tot = {}
-    for ps, v in zip(val, val_voices):
-        ids, ref = inputs(ps, v)
+    for ids, ref in text.val:
         for k, x in {**local_losses(ids, ref), **chain_losses(ids, ref)}.items():
-            tot[k] = tot.get(k, 0) + float(x) / len(val)
+            tot[k] = tot.get(k, 0) + float(x) / len(text.val)
     student.train()
     return {k: round(v, 5) for k, v in tot.items()}
 
@@ -173,7 +141,7 @@ for stage, steps in [("local", LOCAL_STEPS), ("chain", CHAIN_STEPS)]:
     for step in range(1, steps + 1):
         running = {}
         for _ in range(ACCUM):
-            args = inputs(random.choice(train), random.randrange(len(voices)))
+            args = text.sample(random)
             if stage == "local":
                 losses = local_losses(*args, scale=1 / ACCUM)
             else:

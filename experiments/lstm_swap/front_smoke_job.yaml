@@ -1,0 +1,14 @@
+# Needs ckpt/te-audio.pt, ckpt/bf-v1.pt (the English-trained front, for comparison) and ckpt/data/
+# {train,val}.txt + multilingual-{train,val}.jsonl in the checkout, untracked.
+name: front-smoke
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/lstm_swap/run_front.sh experiments/lstm_swap/out/front-smoke 5 5 5 5 5 2
+gpus: 1
+priority: 9
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+outputs:
+  - path: experiments/lstm_swap/out
+estimated_runtime_min: 20

@@ -1,5 +1,7 @@
 """Retrain only the text encoder's student, keeping BASE_PT's other students.
 
+Text in every language (multidata.py), each read by its own voices.
+
 usage: train_te.py DATA_DIR BASE_PT OUT_PT MODE STEPS [ARCH_JSON]
 MODE "tenc": a fresh student (ARCH_JSON overrides its arch) regressing the LSTM's output, as before.
 MODE "audio": BASE_PT's student, fine-tuned so the frozen decoder's audio from its output matches
@@ -15,11 +17,11 @@ import time
 
 import torch
 import torch.nn.functional as F
-from huggingface_hub import hf_hub_download, list_repo_files
 from loguru import logger
 
 from kokoro import KModel
 import seqfwd
+import multidata
 import students as st
 
 logger.remove()
@@ -30,7 +32,8 @@ TE = "text_encoder.lstm"
 ACCUM = 16 if MODE == "tenc" else 8
 LR = 1e-3 if MODE == "tenc" else 1e-4
 # The decoder's backward pass on long sentences doesn't fit next to the desktop on an 8 GB card.
-MAX_PHONEMES = 100 if MODE == "audio" else 10**9
+MAX_PHONEMES = 100 if MODE == "audio" else 510
+VAL_PER_LANG = 5
 dev = "cuda"
 torch.manual_seed(0)
 random.seed(0)
@@ -38,12 +41,7 @@ random.seed(0)
 teacher = KModel(repo_id="hexgrad/Kokoro-82M").eval().to(dev)
 for p in teacher.parameters():
     p.requires_grad_(False)
-voice_files = [f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/") and f[7] in "ab"]
-voices = [torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True) for f in voice_files]
-train = [ps for ps in open(os.path.join(DATA, "train.txt")).read().split("\n")[:-1] if len(ps) <= MAX_PHONEMES]
-val = open(os.path.join(DATA, "val.txt")).read().split("\n")[:-1][:100]
-val = [ps for ps in val if len(ps) <= MAX_PHONEMES][:50]
-val_voices = [random.randrange(len(voices)) for _ in val]
+text = multidata.Text(DATA, teacher.vocab, dev, max_ids=MAX_PHONEMES, val_per_lang=VAL_PER_LANG)
 
 base = torch.load(BASE, weights_only=True)
 arch = {**base["arch"], TE: {**base["arch"].get(TE, {}), **ARCH}} if MODE == "tenc" else base["arch"]
@@ -52,15 +50,12 @@ if MODE == "tenc":
     studs[TE] = st.make_students(teacher, arch)[TE]
 student = studs[TE].to(dev).train()
 params = list(student.parameters())
-print("mode", MODE, "train", len(train), "student params M", round(sum(p.numel() for p in params) / 1e6, 2),
+print("mode", MODE, "languages", text.langs, "val", len(text.val), "student params M", round(sum(p.numel() for p in params) / 1e6, 2),
       "arch", json.dumps(arch.get(TE, {})), flush=True)
 student_te = copy.deepcopy(teacher.text_encoder)
 student_te.lstm = student
 
 
-def inputs(ps, voice_idx):
-    ids = torch.LongTensor([[0, *[teacher.vocab[p] for p in ps if p in teacher.vocab], 0]]).to(dev)
-    return ids, voices[voice_idx][len(ps) - 1].to(dev)
 
 
 def stft_loss(a, b):
@@ -97,9 +92,9 @@ def losses(ids, ref):
 def validate():
     student.eval()
     tot = {}
-    for ps, v in zip(val, val_voices):
-        for k, x in losses(*inputs(ps, v)).items():
-            tot[k] = tot.get(k, 0) + x.item() / len(val)
+    for ids, ref in text.val:
+        for k, x in losses(ids, ref).items():
+            tot[k] = tot.get(k, 0) + x.item() / len(text.val)
     student.train()
     return {k: round(v, 5) for k, v in tot.items()}
 
@@ -121,7 +116,7 @@ t0 = time.time()
 for step in range(1, STEPS + 1):
     running = {}
     for _ in range(ACCUM):
-        ls = losses(*inputs(random.choice(train), random.randrange(len(voices))))
+        ls = losses(*text.sample(random))
         (sum(ls.values()) / ACCUM).backward()
         for k, v in ls.items():
             running[k] = running.get(k, 0) + v.item() / ACCUM
