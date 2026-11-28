@@ -105,14 +105,23 @@ class VocosDecoder(nn.Module):
     spectra, Kokoro's harmonic source and (full_band) every harmonic up to FULL_BAND_HZ, and the
     spectrum is their filtered sum. Head "both": the sum of the two. The noise in Kokoro's source is all the randomness its decoder
     has, and it is too detailed to pass through the network, so a "spec" head can only produce an
-    average of what the teacher did with it; a filter passes it through."""
+    average of what the teacher did with it; a filter passes it through.
+
+    `sub` spectra per frame: with sub 1 a frame's output is one spectrum of a 50 ms window (n_fft
+    1200, hop 300); with sub 3 it is three spectra of 16.7 ms windows (n_fft 400, hop 100), the
+    same number of outputs. A short window holds a pitch period or two, in which a voice's pitch
+    hardly moves, so a harmonic's phase is simpler to state than over 50 ms of a changing pitch."""
 
     def __init__(self, source: nn.Module, asr_dim=512, style_dim=128, dim=512, layers=8, mult=3,
-                 head="spec", full_band=False):
+                 head="spec", full_band=False, sub=1):
         super().__init__()
-        assert head in MAX_MAGNITUDE and (head != "spec" or not full_band)
-        self.config = dict(dim=dim, layers=layers, mult=mult, head=head, full_band=full_band)
-        self.head_kind, self.full_band = head, full_band
+        assert head in MAX_MAGNITUDE and (head != "spec" or not full_band) and HOP % sub == 0
+        self.config = dict(dim=dim, layers=layers, mult=mult, head=head, full_band=full_band, sub=sub)
+        self.head_kind, self.full_band, self.sub = head, full_band, sub
+        self.hop = HOP // sub
+        self.n_fft = 4 * self.hop
+        self.bins = self.n_fft // 2 + 1
+        BINS = self.bins * sub  # a frame's bins, over its spectra
         sources = 2 if full_band else 1
         # Kokoro's harmonic source, frozen: the sines at F0 and its overtones, mixed by one linear layer.
         self.source = copy.deepcopy(source).requires_grad_(False)
@@ -123,7 +132,7 @@ class VocosDecoder(nn.Module):
         self.blocks = nn.ModuleList(ConvNeXtBlock(dim, mult, cond_dim, 1 / layers) for _ in range(layers))
         self.final = AdaLN(dim, cond_dim)
         self.head = nn.Linear(dim, 2 * BINS * {"spec": 1, "filter": sources, "both": sources + 1}[head])
-        self.register_buffer("window", torch.hann_window(N_FFT), persistent=False)
+        self.register_buffer("window", torch.hann_window(self.n_fft), persistent=False)
 
     def harmonic_source(self, f0):
         """f0 [B, 2T] (Hz, 80 per second) -> [B, 600 T] samples, as Kokoro's generator makes it."""
@@ -133,7 +142,17 @@ class VocosDecoder(nn.Module):
         return har.transpose(1, 2).squeeze(1)
 
     def _stft(self, x):
-        return torch.stft(x.float(), N_FFT, HOP, window=self.window, center=True, return_complex=True)
+        return torch.stft(x.float(), self.n_fft, self.hop, window=self.window, center=True, return_complex=True)
+
+    def _per_frame(self, z):
+        """[B, C, bins, frames * sub] -> [B, C * sub * bins, frames]: a frame's spectra side by side."""
+        b, c, bins, n = z.shape
+        return z.reshape(b, c, bins, n // self.sub, self.sub).permute(0, 1, 4, 2, 3).reshape(b, -1, n // self.sub)
+
+    def _per_spectrum(self, x):
+        """_per_frame's inverse for one channel: [B, sub * bins, frames] -> [B, bins, frames * sub]."""
+        b, _, n = x.shape
+        return x.reshape(b, self.sub, self.bins, n).permute(0, 2, 3, 1).reshape(b, self.bins, n * self.sub)
 
     def forward(self, asr, F0_curve, N, s, source=None, cycles0=None):
         """asr [B, 512, T] (40 frames per second), F0_curve and N [B, 2T], s [B, 128] ->
@@ -141,19 +160,22 @@ class VocosDecoder(nn.Module):
         `cycles0` is full_band_source's, for crops."""
         if source is None:
             source = self.harmonic_source(F0_curve)
-        frames = F0_curve.shape[1]  # 2T; the STFT has one more (center=True)
+        frames = F0_curve.shape[1]  # 2T
+        # The STFT has one spectrum more than frames * sub (center=True). With sub 1 the network runs on
+        # 2T + 1 frames; otherwise on 2T, and the last spectrum, at the sentence's very end, is left zero.
+        extra = 1 if self.sub == 1 else 0
         specs = [self._stft(source)]
         if self.full_band:
             specs.append(self._stft(full_band_source(F0_curve, cycles0)))
-        src = torch.cat([f(sp) for sp in specs for f in (lambda z: torch.log(z.abs() + 1e-5),
-                                                         lambda z: torch.cos(z.angle()),
-                                                         lambda z: torch.sin(z.angle()))], dim=1)
+        specs = [sp if extra else sp[..., :-1] for sp in specs]
+        src = self._per_frame(torch.stack([f(sp) for sp in specs for f in (lambda z: torch.log(z.abs() + 1e-5),
+                                                                          lambda z: torch.cos(z.angle()),
+                                                                          lambda z: torch.sin(z.angle()))], dim=1))
 
         voiced = (F0_curve > 10).float()
         frame = torch.stack([torch.log(F0_curve.clamp(min=10)) * voiced, voiced, N.float()], dim=1)
-        # 2T + 1 frames, as the STFT has.
-        frame = F.pad(frame, (0, 1), mode="replicate")  # [B, 3, 2T + 1]
-        asr2 = F.pad(asr.repeat_interleave(2, dim=2), (0, 1), mode="replicate")  # [B, 512, 2T + 1]
+        frame = F.pad(frame, (0, extra), mode="replicate")  # [B, 3, 2T + extra]
+        asr2 = F.pad(asr.repeat_interleave(2, dim=2), (0, extra), mode="replicate")  # [B, 512, 2T + extra]
         x = self.embed(torch.cat([asr2, frame.to(asr2.dtype)], dim=1)).transpose(1, 2)
         x = x + self.embed_source(src.transpose(1, 2).to(x.dtype))
         frame = frame.transpose(1, 2)
@@ -164,20 +186,22 @@ class VocosDecoder(nn.Module):
             x = block(x, cond, keep)
         # Contiguous, and torch.complex rather than torch.polar: compiled, both fail on the
         # transposed layout (a stride assertion in torch 2.8).
-        x = self.head(self.final(x, cond)).transpose(1, 2).float().contiguous()  # [B, 2 * BINS (* sources), 2T + 1]
+        x = self.head(self.final(x, cond)).transpose(1, 2).float().contiguous()
+        # One [B, bins, frames * sub] tensor per output: (log magnitude or gain, phase) per term.
+        outs = [self._per_spectrum(o) for o in x.chunk(x.shape[1] // (self.bins * self.sub), dim=1)]
         if self.head_kind == "spec":
-            spec = _polar(torch.exp(x[:, :BINS].clamp(max=math.log(MAX_MAGNITUDE["spec"]))), x[:, BINS:])
+            spec = _polar(torch.exp(outs[0].clamp(max=math.log(MAX_MAGNITUDE["spec"]))), outs[1])
         else:
             spec = 0
             for i, sp in enumerate(specs):
-                gain, shift = x[:, 2 * i * BINS : (2 * i + 1) * BINS], x[:, (2 * i + 1) * BINS : (2 * i + 2) * BINS]
-                spec = spec + _polar(torch.exp(gain.clamp(max=math.log(MAX_GAIN))), shift) * sp
+                spec = spec + _polar(torch.exp(outs[2 * i].clamp(max=math.log(MAX_GAIN))), outs[2 * i + 1]) * sp
             if self.head_kind == "both":
-                own = x[:, -2 * BINS :]
-                spec = spec + _polar(torch.exp(own[:, :BINS].clamp(max=math.log(MAX_MAGNITUDE["both"]))), own[:, BINS:])
+                spec = spec + _polar(torch.exp(outs[-2].clamp(max=math.log(MAX_MAGNITUDE["both"]))), outs[-1])
             mag = spec.abs()
             spec = spec * (mag.clamp(max=MAX_MAGNITUDE[self.head_kind]) / (mag + 1e-9))
-        audio = torch.istft(spec, N_FFT, HOP, window=self.window, center=True, length=frames * HOP)
+        if not extra:
+            spec = F.pad(spec, (0, 1))
+        audio = torch.istft(spec, self.n_fft, self.hop, window=self.window, center=True, length=frames * HOP)
         return audio[:, None]
 
 
