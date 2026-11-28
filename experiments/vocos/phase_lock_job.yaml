@@ -1,0 +1,12 @@
+# Needs ckpt/vocos-adv-phase.pt (train_adv.py's) in the checkout, and the corpus run.sh makes.
+name: vocos-phase-lock
+setup: bash experiments/vocos/setup.sh
+command: .venv/bin/python experiments/vocos/phase_lock.py $GPUC_DATA_DIR/kokoro-vocos/val ckpt/vocos-adv-phase.pt experiments/vocos/out/phase-lock 8
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 10
