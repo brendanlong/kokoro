@@ -39,6 +39,6 @@ for k, i in enumerate(picks):
         files[name] = f"{k:02d}-{name}.wav"
         sf.write(os.path.join(OUT, files[name]), a.float().cpu().numpy(), vm.SAMPLE_RATE)
     e = val.index[i]
-    items.append({"voice": e["voice"], "source": f"Validation sentence {i}", "text": e["phonemes"], "files": files})
+    items.append({"voice": e["voice"], "source": f"Validation sentence {i}", "text": e.get("text") or e["phonemes"], "files": files})
 json.dump(items, open(os.path.join(OUT, "samples.json"), "w"), indent=1, ensure_ascii=False)
 json.dump({"labels": labels, "blind": ["teacher", list(decoders)[-1]], "intro": ""}, open(os.path.join(OUT, "page.json"), "w"), indent=1)

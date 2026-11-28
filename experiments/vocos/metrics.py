@@ -66,11 +66,17 @@ def evaluate(decoder, val, spectral, dev):
         row["_vuv"] = [(vo & vr).sum().item(), (vo & ~vr).sum().item(), (~vo & vr).sum().item()]
         both = vo & vr
         row["_cents"] = (1200 * torch.log2(p_out[both] / p_ref[both])).pow(2).tolist()
+        row["_lang"] = val.index[i].get("lang", "a")
         rows.append(row)
     tp, fp, fn = (sum(r["_vuv"][j] for r in rows) for j in range(3))
     summary = {k: round(float(np.nanmean([r[k] for r in rows if k in r])), 5) for k in rows[0] if not k.startswith("_")}
     summary["vuv_f1"] = round(2 * tp / max(1, 2 * tp + fp + fn), 5)
     summary["pitch_rmse_cents"] = round(float(np.sqrt(np.mean([c for r in rows for c in r["_cents"]]))), 3)
+    langs = sorted({r["_lang"] for r in rows})
+    if len(langs) > 1:
+        summary["by_lang"] = {lang: {k: round(float(np.nanmean([r[k] for r in rows if r["_lang"] == lang and k in r])), 4)
+                                     for k in ("msmel", "stft", "phase", "level_abs_db", "periodicity_rmse")}
+                              for lang in langs}
     return summary
 
 

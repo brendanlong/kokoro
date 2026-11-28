@@ -1,0 +1,25 @@
+# The decoder against the original Kokoro in every language: a 50-hour corpus of the original model's
+# own audio and decoder inputs (10 h of English novels, 4.5 h of Wikipedia in each of the nine
+# language settings, each read by a voice of its language), then the hybrid head with three spectra
+# per frame for 150,000 steps, at width 512 and 384. Needs ckpt/data/corpus-{train,val}.jsonl
+# (corpus_text.py), untracked.
+name: vocos-sweep6-multilingual
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/vocos/sweep.sh experiments/vocos/out/sweep6 150000 'ml-both-sub3={"model":{"head":"both","full_band":true,"sub":3},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}' 'ml-both-sub3-d384={"model":{"head":"both","full_band":true,"sub":3,"dim":384},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1}}'
+gpus: 1
+priority: 20
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+  CORPUS_NAME: kokoro-vocos-orig-ml
+  FRONT_STUDENTS: "-"
+  FRONT_FRAME_SIDE: "-"
+  TRAIN_N: "18700"
+  VAL_N: "180"
+secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
+outputs:
+  - path: experiments/vocos/out/sweep6
+    s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/sweep6
+estimated_runtime_min: 560
+max_runtime_min: 900
