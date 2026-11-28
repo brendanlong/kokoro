@@ -58,6 +58,24 @@ def lock(Y, tone, region, seconds):
     return torch.where(region, locked, Y)
 
 
+def lock_harmonics(Y, tone, f0_frames, region, seconds, max_harmonics=160):
+    """As lock, but the drift is measured at each harmonic's own frequency (it moves between bins as
+    the pitch moves), smoothed over time per harmonic, and applied to every bin around that harmonic
+    (each bin takes the drift of its nearest harmonic), as identity phase locking does."""
+    df = vm.SAMPLE_RATE / N_FFT
+    f0 = f0_frames.clamp(min=50)[None, :]  # [1, frames]
+    h = torch.arange(1, max_harmonics + 1, device=Y.device)[:, None]  # [H, 1]
+    centre = (h * f0 / df).round().long().clamp(max=Y.shape[0] - 1)  # [H, frames]
+    drift = torch.gather(unit(Y), 0, centre) * torch.gather(unit(tone), 0, centre).conj()
+    width = max(1, round(seconds * vm.SAMPLE_RATE / HOP)) | 1
+    kernel = torch.ones(1, 1, width, device=Y.device) / width
+    smooth = lambda x: F.conv1d(x[:, None], kernel, padding=width // 2)[:, 0]  # noqa: E731
+    drift = torch.complex(smooth(drift.real), smooth(drift.imag))
+    nearest = (freqs[:, None] / f0).round().long().clamp(1, max_harmonics) - 1  # [bins, frames]
+    locked = Y.abs() * unit(tone) * unit(torch.gather(drift, 0, nearest))
+    return torch.where(region, locked, Y)
+
+
 def phase_distance(X, T, region):
     """Mean |unit(X) - unit(T)| in region, weighted by T's magnitude^0.3 (common.phase_errors' "phase")."""
     w = T.abs() ** 0.3 * region
@@ -76,9 +94,12 @@ for k, i in enumerate(picks):
     region = band & voiced[None, :]
     istft = lambda Z: torch.istft(Z, N_FFT, HOP, window=window, length=audio.shape[0])  # noqa: E731
     variants = {"teacher": (audio, T), "decoder": (out, Y)}
+    f0_frames = F.interpolate(f0[None, None].float(), size=Y.shape[-1], mode="nearest")[0, 0]
     for s in SMOOTHING_S:
         Z = lock(Y, Ton, region, s)
         variants[f"locked_{int(s * 1000)}ms"] = (istft(Z), Z)
+        Z = lock_harmonics(Y, Ton, f0_frames, region, s)
+        variants[f"harmonic_{int(s * 1000)}ms"] = (istft(Z), Z)
     Z = torch.where(region, torch.polar(Y.abs(), T.angle()), Y)
     variants["teacher_phase_region"] = (istft(Z), Z)
     files = {}
@@ -98,11 +119,13 @@ json.dump({
     "labels": {
         "teacher": "Teacher (Kokoro's decoder)",
         "decoder": "Vocos-style decoder (candidate)",
-        **{f"locked_{int(s * 1000)}ms": f"Decoder + phase-locking filter, drift smoothed over {int(s * 1000)} ms"
+        **{f"locked_{int(s * 1000)}ms": f"Decoder + phase locking per bin, drift smoothed over {int(s * 1000)} ms"
+           for s in SMOOTHING_S},
+        **{f"harmonic_{int(s * 1000)}ms": f"Decoder + phase locking per harmonic, drift smoothed over {int(s * 1000)} ms"
            for s in SMOOTHING_S},
         "teacher_phase_region": "Decoder with the teacher's phase in voiced 2-8 kHz (what the filter could at best reach)",
     },
-    "blind": ["teacher", f"locked_{int(SMOOTHING_S[-1] * 1000)}ms"],
+    "blind": ["teacher", f"harmonic_{int(SMOOTHING_S[-1] * 1000)}ms"],
     "intro": (
         "<p>Paradee's phase-locking filter (arXiv:2610.06817, section 7) on the Vocos-style decoder. The swap test "
         "found the decoder's magnitudes fine and its phase what sounds robotic. In voiced frames between 2 and 8 kHz "
