@@ -52,6 +52,12 @@ for k, i in enumerate(picks):
         "dmag_tphase": wav(torch.polar(S.abs(), T.angle())),
         "tmag_dphase": wav(torch.polar(T.abs(), S.angle())),
         "decoder_tphase_2_8k": wav(torch.where(band & voiced[None, :], torch.polar(S.abs(), T.angle()), S)),
+        "decoder_tphase_voiced": wav(torch.where(voiced[None, :], torch.polar(S.abs(), T.angle()), S)),
+        "decoder_tphase_voiced_low": wav(torch.where((freqs < 2000)[:, None] & voiced[None, :], torch.polar(S.abs(), T.angle()), S)),
+        "decoder_tphase_unvoiced": wav(torch.where(~voiced[None, :], torch.polar(S.abs(), T.angle()), S)),
+        # No teacher: the phase of white noise's own STFT where the sentence is unvoiced.
+        "decoder_noise_phase_unvoiced": wav(torch.where(
+            ~voiced[None, :], torch.polar(S.abs(), spec(torch.randn_like(out)).angle()), S)),
     }
     files = {}
     for name, a in variants.items():
@@ -69,6 +75,10 @@ json.dump({
         "dmag_tphase": "Decoder's magnitudes, teacher's phase",
         "tmag_dphase": "Teacher's magnitudes, decoder's phase",
         "decoder_tphase_2_8k": "Decoder, with the teacher's phase in voiced 2-8 kHz only",
+        "decoder_tphase_voiced": "Decoder, with the teacher's phase in voiced frames only (all frequencies)",
+        "decoder_tphase_voiced_low": "Decoder, with the teacher's phase in voiced frames below 2 kHz only",
+        "decoder_tphase_unvoiced": "Decoder, with the teacher's phase in unvoiced frames only",
+        "decoder_noise_phase_unvoiced": "Decoder, with white noise's phase in unvoiced frames (no teacher)",
     },
     "blind": ["teacher", "dmag_tphase"],
     "intro": (
@@ -77,7 +87,9 @@ json.dump({
         "teacher used, so the two line up sample for sample. Their spectrograms (n_fft 1024, hop 256) are then "
         "recombined. If <em>decoder's magnitudes, teacher's phase</em> sounds natural, the phase is at fault; if "
         "<em>teacher's magnitudes, decoder's phase</em> sounds robotic, likewise. The last variant swaps phase only "
-        "in voiced 2-8 kHz, where Paradee (arXiv:2610.06817) found its buzz.</p>"
+        "in voiced 2-8 kHz, where Paradee (arXiv:2610.06817) found its buzz. The ones after it narrow down where the "
+        "phase matters: voiced frames at all frequencies, voiced frames below 2 kHz, and unvoiced frames (consonants "
+        "and silences). The last needs no teacher: unvoiced frames get the phase of white noise.</p>"
         "<p>Recombining spectrograms isn't perfectly clean (a magnitude and a phase from different signals don't "
         "make a consistent STFT), so a little roughness in the swapped versions is the method, not the decoder.</p>"),
 }, open(os.path.join(OUT, "page.json"), "w"), indent=1)
