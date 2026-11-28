@@ -9,10 +9,11 @@ priority: 20
 env:
   REQUIRE_CUDA: "1"
   PYTHONUNBUFFERED: "1"
+  VAL_NAME: val100
   PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
 secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
 outputs:
   - path: experiments/vocos/out/sweep5
     s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/sweep5
-estimated_runtime_min: 135
-max_runtime_min: 170
+estimated_runtime_min: 240
+max_runtime_min: 480
