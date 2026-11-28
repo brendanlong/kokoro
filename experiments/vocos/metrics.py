@@ -54,6 +54,11 @@ def evaluate(decoder, val, spectral, dev):
         row["level_abs_db"] = diff.abs().mean().item()
         row["level_bias_voiced_db"] = diff[v].mean().item() if v.any() else float("nan")
         row["level_bias_unvoiced_db"] = diff[~v].mean().item() if (~v).any() else float("nan")
+        # Noise has a mean log-magnitude 0.29 below a smooth spectrum of the same energy, so a decoder
+        # that plays a smooth sound where the teacher has noise scores about +0.29 here.
+        unv = heard & ~voiced[0]
+        if unv.any():
+            row["unvoiced_logmag_bias"] = (X.abs().clamp(min=1e-5).log() - T.abs().clamp(min=1e-5).log())[:, unv].mean().item()
 
         (p_out, per_out), (p_ref, per_ref) = crepe(out, dev), crepe(audio, dev)
         row["periodicity_rmse"] = (per_out - per_ref).pow(2).mean().sqrt().item()

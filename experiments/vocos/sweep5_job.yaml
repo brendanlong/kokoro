@@ -1,0 +1,18 @@
+# Stage-one sweep, wave 5: a noise branch (fresh white noise with a gain per bin; all there is in
+# unvoiced frames), with the phase terms on voiced stretches only, at one and at three spectra per frame. Needs ckpt/te-audio.pt, ckpt/bf-v1.pt and
+# ckpt/data/{train,val}.txt in the checkout, untracked.
+name: vocos-sweep5-noise
+setup: bash experiments/vocos/setup.sh
+command: bash experiments/vocos/sweep.sh experiments/vocos/out/sweep5 60000 'both-noise={"model":{"head":"both","full_band":true,"noise":true},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1},"phase_voiced_only":true}' 'both-noise-sub3={"model":{"head":"both","full_band":true,"noise":true,"sub":3},"loss":{"msmel":1,"stft":1,"phase":1,"cplx":1},"phase_voiced_only":true}'
+gpus: 1
+priority: 20
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY]
+outputs:
+  - path: experiments/vocos/out/sweep5
+    s3: s3://brendanlong-experiments/kokoro-vocos/{job_id}/sweep5
+estimated_runtime_min: 135
+max_runtime_min: 170

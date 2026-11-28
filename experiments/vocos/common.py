@@ -116,7 +116,8 @@ class Spectral:
     def _mag(self, a, n_fft, hop):
         return self._stft(a, n_fft, hop).abs()
 
-    def term(self, name, audio, target):
+    def term(self, name, audio, target, voiced=None):
+        """voiced [B, samples] (bool): if given, the phase and cplx terms count voiced stretches only."""
         if name == "mel":
             logmel = lambda a: torch.log((self.mel @ self._mag(a, 1024, 256)).clamp(min=1e-5))  # noqa: E731
             return (logmel(audio) - logmel(target)).abs().mean()
@@ -133,15 +134,21 @@ class Spectral:
                 total = total + (logmel(audio) - logmel(target)).abs().mean()
             return total / len(self.ms_mel)
         X, T = self._stft(audio, PHASE_FFT, PHASE_HOP), self._stft(target, PHASE_FFT, PHASE_HOP)
+        # A frame counts as voiced by the sample at its centre.
+        mask = None
+        if voiced is not None:
+            mask = voiced[..., ::PHASE_HOP].float()
+            mask = torch.nn.functional.pad(mask, (0, X.shape[-1] - mask.shape[-1]), mode="replicate")[..., None, :]
         if name == "phase":
-            return sum(phase_errors(X, T).values()) / 3
+            return sum(phase_errors(X, T, None if mask is None else T.abs() ** 0.3 * mask).values()) / 3
         if name == "cplx":
             squash = lambda Z: Z * (Z.abs() + 1e-3) ** -0.7  # noqa: E731
-            return (squash(X) - squash(T)).abs().mean()
+            d = (squash(X) - squash(T)).abs()
+            return d.mean() if mask is None else (d * mask).sum() / (mask.sum() * d.shape[-2]).clamp(min=1)
         raise ValueError(name)
 
-    def __call__(self, audio, target, terms=None):
-        return {name: self.term(name, audio, target) for name in (terms or self.weights)}
+    def __call__(self, audio, target, terms=None, voiced=None):
+        return {name: self.term(name, audio, target, voiced) for name in (terms or self.weights)}
 
     def total(self, losses):
         return sum(self.weights[k] * v for k, v in losses.items())

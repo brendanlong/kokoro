@@ -8,7 +8,8 @@ sentence has (the middle matches the whole sentence's to 67 dB, review_cpu.py).
 usage: train.py CORPUS_DIR VAL_CORPUS_DIR OUT_PT STEPS [CONFIG_JSON]
 
 CONFIG_JSON: {"model": VocosDecoder's keyword arguments, "loss": {term: weight}, "seed": 0,
-"init": a checkpoint to start from}. The default is the decoder and losses of v2. A run that finds
+"init": a checkpoint to start from, "phase_voiced_only": the phase and cplx terms skip unvoiced stretches,
+where a decoder with a noise branch should not be matching the teacher's phase}. The default is the decoder and losses of v2. A run that finds
 OUT_PT's ".resume" file carries on from it.
 """
 import json
@@ -71,7 +72,8 @@ for step in range(first, STEPS + 1):
     asr, f0, n, audio, source, style, cycles0 = train.crops(random.Random(f"{seed}/{step}"), BATCH)
     with torch.autocast(dev, dtype=torch.bfloat16):
         out = decoder(asr, f0, n, style, source=source, cycles0=cycles0)[:, 0]
-    losses = spectral(out[:, common.SCORED].float(), audio[:, common.SCORED])
+    voiced = (f0 > 10).repeat_interleave(300, dim=1)[:, common.SCORED] if CONFIG.get("phase_voiced_only") else None
+    losses = spectral(out[:, common.SCORED].float(), audio[:, common.SCORED], voiced=voiced)
     spectral.total(losses).backward()
     torch.nn.utils.clip_grad_norm_(params, 1.0)
     opt.step()

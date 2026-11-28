@@ -110,14 +110,20 @@ class VocosDecoder(nn.Module):
     `sub` spectra per frame: with sub 1 a frame's output is one spectrum of a 50 ms window (n_fft
     1200, hop 300); with sub 3 it is three spectra of 16.7 ms windows (n_fft 400, hop 100), the
     same number of outputs. A short window holds a pitch period or two, in which a voice's pitch
-    hardly moves, so a harmonic's phase is simpler to state than over 50 ms of a changing pitch."""
+    hardly moves, so a harmonic's phase is simpler to state than over 50 ms of a changing pitch.
+
+    `noise`: a separate way to make noise. Fresh white noise's spectrum, with a gain per bin from the
+    network, is added in voiced frames and is all there is in unvoiced ones. Noise's phase is random,
+    which a network with no randomness of its own cannot produce: it settles on an orderly phase and
+    the hiss turns tonal. Here it only has to say how loud the noise is at each frequency."""
 
     def __init__(self, source: nn.Module, asr_dim=512, style_dim=128, dim=512, layers=8, mult=3,
-                 head="spec", full_band=False, sub=1):
+                 head="spec", full_band=False, sub=1, noise=False):
         super().__init__()
         assert head in MAX_MAGNITUDE and (head != "spec" or not full_band) and HOP % sub == 0
-        self.config = dict(dim=dim, layers=layers, mult=mult, head=head, full_band=full_band, sub=sub)
-        self.head_kind, self.full_band, self.sub = head, full_band, sub
+        assert head != "spec" or not noise
+        self.config = dict(dim=dim, layers=layers, mult=mult, head=head, full_band=full_band, sub=sub, noise=noise)
+        self.head_kind, self.full_band, self.sub, self.noise = head, full_band, sub, noise
         self.hop = HOP // sub
         self.n_fft = 4 * self.hop
         self.bins = self.n_fft // 2 + 1
@@ -131,7 +137,7 @@ class VocosDecoder(nn.Module):
         self.norm = AdaLN(dim, cond_dim)
         self.blocks = nn.ModuleList(ConvNeXtBlock(dim, mult, cond_dim, 1 / layers) for _ in range(layers))
         self.final = AdaLN(dim, cond_dim)
-        self.head = nn.Linear(dim, 2 * BINS * {"spec": 1, "filter": sources, "both": sources + 1}[head])
+        self.head = nn.Linear(dim, 2 * BINS * ({"spec": 1, "filter": sources, "both": sources + 1}[head] + noise))
         self.register_buffer("window", torch.hann_window(self.n_fft), persistent=False)
 
     def harmonic_source(self, f0):
@@ -196,7 +202,14 @@ class VocosDecoder(nn.Module):
             for i, sp in enumerate(specs):
                 spec = spec + _polar(torch.exp(outs[2 * i].clamp(max=math.log(MAX_GAIN))), outs[2 * i + 1]) * sp
             if self.head_kind == "both":
-                spec = spec + _polar(torch.exp(outs[-2].clamp(max=math.log(MAX_MAGNITUDE["both"]))), outs[-1])
+                own = 2 * len(specs)
+                spec = spec + _polar(torch.exp(outs[own].clamp(max=math.log(MAX_MAGNITUDE["both"]))), outs[own + 1])
+            if self.noise:
+                white = self._stft(0.1 * torch.randn_like(source.float()))
+                white = white if extra else white[..., :-1]
+                hiss = _polar(torch.exp(outs[-2].clamp(max=math.log(MAX_GAIN))), outs[-1]) * white
+                is_voiced = F.pad(voiced, (0, extra), mode="replicate").repeat_interleave(self.sub, dim=1)[:, None] > 0
+                spec = torch.where(is_voiced, spec + hiss, hiss)
             mag = spec.abs()
             spec = spec * (mag.clamp(max=MAX_MAGNITUDE[self.head_kind]) / (mag + 1e-9))
         if not extra:
