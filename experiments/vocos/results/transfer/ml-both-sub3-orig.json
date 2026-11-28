@@ -1,0 +1,82 @@
+{
+ "mel": 0.46912,
+ "stft": 0.80356,
+ "msmel": 0.21351,
+ "phase": 0.54626,
+ "cplx": 0.22538,
+ "voiced_2_8k_phase": 0.71957,
+ "voiced_2_8k_bin_step": 0.58109,
+ "voiced_2_8k_frame_step": 0.63125,
+ "level_abs_db": 0.91834,
+ "level_bias_voiced_db": -0.2102,
+ "level_bias_unvoiced_db": -0.82414,
+ "unvoiced_logmag_bias": -0.04733,
+ "periodicity_rmse": 0.11923,
+ "vuv_f1": 0.94146,
+ "pitch_rmse_cents": 25.679,
+ "by_lang": {
+  "a": {
+   "msmel": 0.2226,
+   "stft": 0.8304,
+   "phase": 0.5503,
+   "level_abs_db": 1.0359,
+   "periodicity_rmse": 0.1145
+  },
+  "b": {
+   "msmel": 0.2214,
+   "stft": 0.8726,
+   "phase": 0.5625,
+   "level_abs_db": 0.968,
+   "periodicity_rmse": 0.1016
+  },
+  "e": {
+   "msmel": 0.2265,
+   "stft": 0.8514,
+   "phase": 0.4764,
+   "level_abs_db": 0.9947,
+   "periodicity_rmse": 0.1081
+  },
+  "f": {
+   "msmel": 0.2009,
+   "stft": 0.8454,
+   "phase": 0.5527,
+   "level_abs_db": 0.7876,
+   "periodicity_rmse": 0.1097
+  },
+  "h": {
+   "msmel": 0.215,
+   "stft": 0.6715,
+   "phase": 0.6079,
+   "level_abs_db": 0.9143,
+   "periodicity_rmse": 0.1496
+  },
+  "i": {
+   "msmel": 0.2309,
+   "stft": 0.8379,
+   "phase": 0.57,
+   "level_abs_db": 0.9532,
+   "periodicity_rmse": 0.1051
+  },
+  "j": {
+   "msmel": 0.1835,
+   "stft": 0.7353,
+   "phase": 0.575,
+   "level_abs_db": 0.8949,
+   "periodicity_rmse": 0.0749
+  },
+  "p": {
+   "msmel": 0.2279,
+   "stft": 0.8367,
+   "phase": 0.4724,
+   "level_abs_db": 0.8749,
+   "periodicity_rmse": 0.115
+  },
+  "z": {
+   "msmel": 0.1928,
+   "stft": 0.7507,
+   "phase": 0.5492,
+   "level_abs_db": 0.8415,
+   "periodicity_rmse": 0.1946
+  }
+ }
+}
