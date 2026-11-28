@@ -1,0 +1,102 @@
+{
+ "config": {
+  "model": {
+   "dim": 384,
+   "layers": 8,
+   "mult": 3,
+   "head": "both",
+   "full_band": true,
+   "sub": 3,
+   "noise": false
+  },
+  "loss": {
+   "msmel": 1,
+   "stft": 1,
+   "phase": 1,
+   "cplx": 1
+  }
+ },
+ "steps": 150000,
+ "metrics": {
+  "mel": 0.46663,
+  "stft": 0.80902,
+  "msmel": 0.21947,
+  "phase": 0.56063,
+  "cplx": 0.23133,
+  "voiced_2_8k_phase": 0.73667,
+  "voiced_2_8k_bin_step": 0.59361,
+  "voiced_2_8k_frame_step": 0.64339,
+  "level_abs_db": 0.94332,
+  "level_bias_voiced_db": -0.22407,
+  "level_bias_unvoiced_db": -0.9174,
+  "unvoiced_logmag_bias": -0.04291,
+  "periodicity_rmse": 0.11996,
+  "vuv_f1": 0.94062,
+  "pitch_rmse_cents": 29.178,
+  "by_lang": {
+   "a": {
+    "msmel": 0.2304,
+    "stft": 0.8337,
+    "phase": 0.5654,
+    "level_abs_db": 1.0815,
+    "periodicity_rmse": 0.1108
+   },
+   "b": {
+    "msmel": 0.2276,
+    "stft": 0.879,
+    "phase": 0.5758,
+    "level_abs_db": 0.995,
+    "periodicity_rmse": 0.0978
+   },
+   "e": {
+    "msmel": 0.2332,
+    "stft": 0.8751,
+    "phase": 0.4925,
+    "level_abs_db": 1.0534,
+    "periodicity_rmse": 0.1079
+   },
+   "f": {
+    "msmel": 0.205,
+    "stft": 0.8365,
+    "phase": 0.5641,
+    "level_abs_db": 0.7973,
+    "periodicity_rmse": 0.1073
+   },
+   "h": {
+    "msmel": 0.2201,
+    "stft": 0.6806,
+    "phase": 0.6241,
+    "level_abs_db": 0.9286,
+    "periodicity_rmse": 0.1583
+   },
+   "i": {
+    "msmel": 0.2375,
+    "stft": 0.8442,
+    "phase": 0.5869,
+    "level_abs_db": 0.9655,
+    "periodicity_rmse": 0.1032
+   },
+   "j": {
+    "msmel": 0.1873,
+    "stft": 0.7324,
+    "phase": 0.5818,
+    "level_abs_db": 0.9015,
+    "periodicity_rmse": 0.082
+   },
+   "p": {
+    "msmel": 0.2345,
+    "stft": 0.8489,
+    "phase": 0.4869,
+    "level_abs_db": 0.8993,
+    "periodicity_rmse": 0.1158
+   },
+   "z": {
+    "msmel": 0.1997,
+    "stft": 0.7507,
+    "phase": 0.568,
+    "level_abs_db": 0.868,
+    "periodicity_rmse": 0.1964
+   }
+  }
+ }
+}

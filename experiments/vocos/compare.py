@@ -25,7 +25,7 @@ for arg in sys.argv[4:]:
     name, path, label = arg.split("=", 2)
     decoders[name], labels[name] = common.make_decoder(dev, path).eval(), label
 
-picks = [i for i, e in enumerate(val.index) if e["frames"] >= 120][::3][:N]
+picks = [i for i, e in enumerate(val.index) if e["frames"] >= 120][:: int(os.environ.get("EVERY", 3))][:N]
 items = []
 for k, i in enumerate(picks):
     asr, f0, n, audio, source, style, cycles0 = val.sentence(i)
