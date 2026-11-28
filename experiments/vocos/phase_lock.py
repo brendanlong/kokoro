@@ -109,7 +109,7 @@ for k, i in enumerate(picks):
         # The resynthesized audio's own STFT, not Z: what a listener gets after overlap-add.
         distances.setdefault(name, []).append(phase_distance(stft(a), T, region))
     e = val.index[i]
-    items.append({"voice": e["voice"], "source": f"Validation sentence {i}", "text": e["phonemes"], "files": files})
+    items.append({"voice": e["voice"], "source": f"Validation sentence {i}", "text": e.get("text", e.get("phonemes")), "files": files})
     print(k, i, e["voice"], {name: round(d[-1], 3) for name, d in distances.items()}, flush=True)
 
 summary = {name: round(sum(d) / len(d), 4) for name, d in distances.items()}

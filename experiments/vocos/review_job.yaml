@@ -1,0 +1,11 @@
+# Needs CPU-loadable ckpt/{te-audio,bf-v1,vocos-adv-phase}-cpu.pt and ckpt/data in the checkout.
+name: vocos-review-cpu-adv-phase
+setup: bash experiments/vocos/setup.sh
+command: 'mkdir -p experiments/vocos/out/review && CUDA_VISIBLE_DEVICES="" .venv/bin/python experiments/vocos/review_cpu.py ckpt/data ckpt/te-audio-cpu.pt ckpt/bf-v1-cpu.pt ckpt/vocos-adv-phase-cpu.pt experiments/vocos/out/review/adv-phase.json'
+gpus: 0
+priority: 10
+env:
+  PYTHONUNBUFFERED: "1"
+outputs:
+  - path: experiments/vocos/out
+estimated_runtime_min: 15
