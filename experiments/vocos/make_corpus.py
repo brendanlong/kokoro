@@ -51,7 +51,7 @@ gen = kokoro.decoder.generator
 
 voice_files = sorted(f for f in list_repo_files("hexgrad/Kokoro-82M") if f.startswith("voices/"))
 voices = {f[7:-3]: torch.load(hf_hub_download("hexgrad/Kokoro-82M", f), weights_only=True) for f in voice_files}
-names = sorted(voices)
+names = sorted(v for v in voices if v in os.environ.get("VOICES", v).split(","))  # VOICES=af_heart,... limits them
 lines = open(os.path.join(DATA, f"{SPLIT}.txt")).read().split("\n")[:-1]
 # eval.py holds out val.txt's last 100 sentences; the val corpus takes its first ones.
 lines = lines[:N] if SPLIT == "val" else rng.sample(lines, min(N, len(lines)))
