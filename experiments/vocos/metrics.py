@@ -23,7 +23,7 @@ CREPE_HOP = 240  # 10 ms at 24 kHz
 def crepe(audio, dev):
     pitch, periodicity = torchcrepe.predict(audio[None], vm.SAMPLE_RATE, CREPE_HOP, 50.0, 800.0, model="full",
                                             decoder=torchcrepe.decode.viterbi, return_periodicity=True,
-                                            batch_size=1024, device=dev)
+                                            batch_size=256, device=dev)
     return pitch[0], periodicity[0]
 
 

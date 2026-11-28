@@ -1,0 +1,13 @@
+# metrics.py for one checkpoint (ckpt/both-noise.pt, untracked) on the host's 100-sentence validation corpus.
+name: vocos-metrics-both-noise
+setup: bash experiments/vocos/setup.sh
+command: bash -c 'mkdir -p experiments/vocos/out/metrics && cd experiments/vocos && ../../.venv/bin/python metrics.py $GPUC_DATA_DIR/kokoro-vocos/val100 ../../ckpt/both-noise.pt out/metrics/both-noise.metrics.json'
+gpus: 1
+priority: 10
+env:
+  REQUIRE_CUDA: "1"
+  PYTHONUNBUFFERED: "1"
+outputs:
+  - path: experiments/vocos/out/metrics
+estimated_runtime_min: 10
+max_runtime_min: 40

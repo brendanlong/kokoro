@@ -1,0 +1,38 @@
+{
+ "config": {
+  "model": {
+   "dim": 512,
+   "layers": 8,
+   "mult": 3,
+   "head": "both",
+   "full_band": true,
+   "sub": 3,
+   "noise": true
+  },
+  "loss": {
+   "msmel": 1,
+   "stft": 1,
+   "phase": 1,
+   "cplx": 1
+  },
+  "phase_voiced_only": true
+ },
+ "steps": 60000,
+ "metrics": {
+  "mel": 0.53312,
+  "stft": 0.91348,
+  "msmel": 0.24905,
+  "phase": 0.62111,
+  "cplx": 0.25931,
+  "voiced_2_8k_phase": 0.77731,
+  "voiced_2_8k_bin_step": 0.62071,
+  "voiced_2_8k_frame_step": 0.6701,
+  "level_abs_db": 1.35903,
+  "level_bias_voiced_db": -0.32942,
+  "level_bias_unvoiced_db": -1.1713,
+  "unvoiced_logmag_bias": -0.03179,
+  "periodicity_rmse": 0.11131,
+  "vuv_f1": 0.94519,
+  "pitch_rmse_cents": 26.509
+ }
+}
